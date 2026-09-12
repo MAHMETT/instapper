@@ -1,5 +1,5 @@
 import { mount } from 'svelte';
-import { applyTheme, getStoredTheme } from '../../lib/theme';
+import { applyTheme, getStoredTheme } from '@/features/theme/theme';
 import App from './App.svelte';
 import './app.css';
 

@@ -1,16 +1,16 @@
 import { defineExtensionMessaging } from '@webext-core/messaging';
-import type { DownloadPayload, DownloadResult } from './types';
 
 /**
- * Kontrak pesan antar konteks.
- * - startAutoScroll / stopAutoScroll / getStatus  -> dikirim ke tab (content script)
- * - downloadCsv                                   -> dikirim ke background
+ * Cross-context message contract.
+ * - startAutoScroll / stopAutoScroll / getStatus  -> sent to tab (content script)
+ * - startExport / cancelExport                     -> sent to background
  */
 export interface ProtocolMap {
   startAutoScroll(): { status: 'started' | 'already-running' };
   stopAutoScroll(): { status: 'stopped' };
   getStatus(): { isScrolling: boolean };
-  downloadCsv(payload: DownloadPayload): DownloadResult;
+  startExport(urls: string[]): { ok: boolean; error?: string };
+  cancelExport(): void;
 }
 
 export const { sendMessage, onMessage, removeAllListeners } =

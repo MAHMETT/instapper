@@ -1,14 +1,14 @@
 <script lang="ts">
 import { browser } from 'wxt/browser';
-import ActionBar from '../../lib/components/ActionBar.svelte';
-import BrandHeader from '../../lib/components/BrandHeader.svelte';
-import ConfirmClearDialog from '../../lib/components/ConfirmClearDialog.svelte';
-import StatsCard from '../../lib/components/StatsCard.svelte';
-import { exportImagesZip } from '../../lib/export';
-import { sendMessage } from '../../lib/messaging';
-import { scrapedImages } from '../../lib/storage';
-import { toggleTheme as doToggleTheme, getStoredTheme, type Theme } from '../../lib/theme';
-import type { ExportProgress as ExportProgressType } from '../../lib/types';
+import { buildCsv, exportFilename } from '@/features/export/csv';
+import { toggleTheme as doToggleTheme, getStoredTheme, type Theme } from '@/features/theme/theme';
+import { sendMessage } from '@/shared/messaging';
+import { exportJob, scrapedImages } from '@/shared/storage';
+import type { ExportProgress as ExportProgressType } from '@/shared/types';
+import ActionBar from './components/ActionBar.svelte';
+import BrandHeader from './components/BrandHeader.svelte';
+import ConfirmClearDialog from './components/ConfirmClearDialog.svelte';
+import StatsCard from './components/StatsCard.svelte';
 
 // ── State ────────────────────────────────────────────────
 let connected = $state(false);
@@ -26,7 +26,6 @@ let theme = $state<Theme>(getStoredTheme());
 // Export state
 let exporting = $state(false);
 let exportProgress = $state<ExportProgressType | null>(null);
-let abortController = $state<AbortController | null>(null);
 
 // ── Derived ──────────────────────────────────────────────
 const badgeText = $derived(connected ? 'Connected' : 'Ready');
@@ -56,7 +55,7 @@ $effect(() => {
   function onKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       if (exporting) {
-        abortController?.abort();
+        sendMessage('cancelExport');
       } else if (showClearModal) {
         showClearModal = false;
       }
@@ -64,13 +63,6 @@ $effect(() => {
   }
   window.addEventListener('keydown', onKeydown);
   return () => window.removeEventListener('keydown', onKeydown);
-});
-
-// Abort export on popup teardown
-$effect(() => {
-  return () => {
-    abortController?.abort();
-  };
 });
 
 // Initialize: active tab, count, scrolling state
@@ -98,8 +90,42 @@ $effect(() => {
     count = images.length;
   });
 
+  const unwatchJob = exportJob.watch((state) => {
+    if (state.status === 'running') {
+      exporting = true;
+      if (state.phase === 'fetching' || state.phase === 'zipping') {
+        exportProgress = { phase: state.phase, done: state.done, total: state.total };
+      }
+      message = '';
+    } else if (state.status === 'done') {
+      exporting = false;
+      exportProgress = null;
+      if (state.failed > 0) {
+        message = `Exported ${state.total - state.failed} images, ${state.failed} failed.`;
+        messageType = 'error';
+      } else {
+        message = `Exported ${state.total} images.`;
+        messageType = 'info';
+      }
+    } else if (state.status === 'error') {
+      exporting = false;
+      exportProgress = null;
+      message = state.error || 'Export failed.';
+      messageType = 'error';
+    } else {
+      // idle
+      if (exporting) {
+        exporting = false;
+        exportProgress = null;
+        message = 'Export canceled.';
+        messageType = 'info';
+      }
+    }
+  });
+
   return () => {
     unwatch();
+    unwatchJob();
   };
 });
 
@@ -135,20 +161,19 @@ async function handleStop() {
 async function handleDownload() {
   const images = await scrapedImages.getValue();
   if (images.length === 0) return;
-  const csv = `\uFEFF"Image URL"\n${images.map((u) => `"${u}"`).join('\n')}`;
-  const filename = `instapper_thumbnails_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+  const csv = buildCsv(images);
+  const filename = exportFilename('csv');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const blobUrl = URL.createObjectURL(blob);
   try {
-    const res = await sendMessage('downloadCsv', { data: csv, filename });
-    if (res.success) {
-      message = 'Download started.';
-      messageType = 'info';
-    } else {
-      message = res.error || 'Download failed.';
-      messageType = 'error';
-    }
+    await browser.downloads.download({ url: blobUrl, filename, saveAs: true });
+    message = 'Download started.';
+    messageType = 'info';
   } catch {
     message = 'Download failed.';
     messageType = 'error';
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   }
 }
 
@@ -165,40 +190,11 @@ async function handleExport() {
   const images = await scrapedImages.getValue();
   if (images.length === 0) return;
 
-  const controller = new AbortController();
-  abortController = controller;
   exporting = true;
   exportProgress = null;
   message = '';
 
-  try {
-    const result = await exportImagesZip(images, {
-      signal: controller.signal,
-      onProgress: (p) => {
-        exportProgress = p;
-      },
-    });
-
-    if (result.failed > 0) {
-      message = `Exported ${result.total - result.failed} images, ${result.failed} failed.`;
-      messageType = 'error';
-    } else {
-      message = `Exported ${result.total} images.`;
-      messageType = 'info';
-    }
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      message = 'Export canceled.';
-      messageType = 'info';
-    } else {
-      message = err instanceof Error ? err.message : 'Export failed.';
-      messageType = 'error';
-    }
-  } finally {
-    exporting = false;
-    exportProgress = null;
-    abortController = null;
-  }
+  await sendMessage('startExport', images);
 }
 </script>
 
@@ -224,7 +220,7 @@ async function handleExport() {
         onStop={handleStop}
         onDownload={handleDownload}
         onExport={handleExport}
-        onExportCancel={() => abortController?.abort()}
+        onExportCancel={() => sendMessage('cancelExport')}
         onClear={() => (showClearModal = true)}
       />
 

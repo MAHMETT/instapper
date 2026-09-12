@@ -1,6 +1,6 @@
 <script lang="ts">
 import { Progress } from 'bits-ui';
-import type { ExportProgress as ExportProgressType } from '../types';
+import type { ExportProgress as ExportProgressType } from '@/shared/types';
 
 let {
   progress,

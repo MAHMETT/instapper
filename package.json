@@ -16,6 +16,7 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "icons": "bun scripts/generate-icons.ts",
+    "test": "vitest run",
     "postinstall": "wxt prepare",
     "prepare": "lefthook install || true"
   },
@@ -30,6 +31,7 @@
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
     "vite": "^8.1.5",
+    "vitest": "^5.0.0",
     "web-ext": "^10.5.0",
     "wxt": "^0.21.3"
   },

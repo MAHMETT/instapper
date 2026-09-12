@@ -1,6 +1,6 @@
 <script lang="ts">
 import { Separator, Tooltip } from 'bits-ui';
-import type { ExportProgress as ExportProgressType } from '../types';
+import type { ExportProgress as ExportProgressType } from '@/shared/types';
 import ExportProgress from './ExportProgress.svelte';
 
 let {

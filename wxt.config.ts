@@ -11,7 +11,7 @@ export default defineConfig({
   manifest: {
     name: 'Instapper — Instagram Scraper',
     description: 'Scrape and export image thumbnails from Instagram hashtag and profile pages.',
-    permissions: ['storage', 'downloads', 'activeTab'],
+    permissions: ['storage', 'downloads', 'offscreen'],
     host_permissions: [
       'https://*.instagram.com/*',
       'https://*.cdninstagram.com/*',

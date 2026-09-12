@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { Theme } from '../theme';
+import type { Theme } from '@/features/theme/theme';
 
 let { theme, onToggle }: { theme: Theme; onToggle: () => void } = $props();
 </script>
