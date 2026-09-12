@@ -32,3 +32,25 @@ export interface ExportRunError {
   ok: false;
   error: string;
 }
+
+/** A saved scraping session in history. */
+export interface ScrapingSession {
+  id: string;
+  date: number;
+  sourceUrl: string;
+  thumbnailCount: number;
+  images: string[];
+}
+
+/** Persisted UI navigation state. */
+export interface UIState {
+  activeTab: 'home' | 'history' | 'about';
+  subPage: string | null;
+}
+
+/** The currently active scraping session metadata. */
+export interface CurrentSession {
+  sourceUrl: string;
+  startTime: number;
+  tabId?: number;
+}

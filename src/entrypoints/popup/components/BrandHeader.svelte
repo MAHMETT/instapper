@@ -5,15 +5,19 @@ import ThemeToggle from './ThemeToggle.svelte';
 let {
   theme,
   detached,
+  compact = false,
   onToggleTheme,
   onPopout,
   children,
+  status,
 }: {
   theme: Theme;
   detached: boolean;
+  compact?: boolean;
   onToggleTheme: () => void;
   onPopout: () => void;
   children?: import('svelte').Snippet;
+  status?: import('svelte').Snippet;
 } = $props();
 </script>
 
@@ -21,17 +25,26 @@ let {
   class="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
 >
   <div class="flex items-center gap-2.5">
-    <img src="/logo.png" alt="Instapper" class="h-6 w-6 shrink-0">
-    <span
-      class="bg-linear-to-r from-brand-indigo via-brand-blue to-brand-cyan bg-clip-text font-brand text-base font-bold tracking-[-0.03em] text-transparent"
-    >
-      instapper
-    </span>
-  </div>
-  <div class="flex items-center gap-2">
+    {#if !compact && !children}
+      <img src="/logo.png" alt="Instapper" class="h-6 w-6 shrink-0">
+      <span
+        class="bg-linear-to-r from-brand-indigo via-brand-blue to-brand-cyan bg-clip-text font-brand text-base font-bold tracking-[-0.03em] text-transparent"
+      >
+        instapper
+      </span>
+    {/if}
     {#if children}
       {@render children()}
     {/if}
+  </div>
+
+  {#if status}
+    <div class="flex flex-1 items-center justify-center">
+      {@render status()}
+    </div>
+  {/if}
+
+  <div class="flex items-center gap-2">
     {#if !detached}
       <button
         type="button"

@@ -4,8 +4,8 @@ import { buildCsv, exportFilename } from '@/features/export/csv';
 import { isPopoutMode } from '@/features/popout/popout';
 import type { Theme } from '@/features/theme/theme';
 import { sendMessage } from '@/shared/messaging';
-import { exportJob, scrapedImages } from '@/shared/storage';
-import type { ExportProgress as ExportProgressType } from '@/shared/types';
+import { currentSession, exportJob, scrapedImages, scrapingHistory } from '@/shared/storage';
+import type { ExportProgress as ExportProgressType, ScrapingSession } from '@/shared/types';
 import ActionBar from '../components/ActionBar.svelte';
 import BrandHeader from '../components/BrandHeader.svelte';
 import ConfirmClearDialog from '../components/ConfirmClearDialog.svelte';
@@ -51,22 +51,63 @@ const exportPercent = $derived(
 
 // ── Tab resolution ───────────────────────────────────────
 async function resolveTab(): Promise<void> {
-  if (detached) {
-    tabId = undefined;
+  // Priority 1: use tabId from currentSession if scraping is active
+  const session = await currentSession.getValue();
+  if (session?.tabId) {
     try {
-      const tabs = await browser.tabs.query({ url: '*://*.instagram.com/*' });
-      const tab = tabs[0];
-      if (tab) {
+      const tab = await browser.tabs.get(session.tabId);
+      if (tab.url?.includes('instagram.com')) {
         tabId = tab.id;
+        connected = true;
+        return;
       }
     } catch {
-      /* no instagram tab */
+      /* tab closed */
     }
-  } else {
-    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  }
+
+  // Priority 2: find any Instagram tab
+  try {
+    const tabs = await browser.tabs.query({ url: '*://*.instagram.com/*' });
     const tab = tabs[0];
-    if (!tab) return;
-    tabId = tab.id;
+    if (tab) {
+      tabId = tab.id;
+      connected = true;
+      return;
+    }
+  } catch {
+    /* no instagram tab */
+  }
+
+  // Priority 3: check active tab (non-detached only)
+  if (!detached) {
+    try {
+      const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs[0];
+      if (tab?.url?.includes('instagram.com')) {
+        tabId = tab.id;
+        connected = true;
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  tabId = undefined;
+  connected = false;
+}
+
+async function switchToTab() {
+  if (tabId === undefined) return;
+  try {
+    const tab = await browser.tabs.get(tabId);
+    if (tab.windowId) {
+      await browser.windows.update(tab.windowId, { focused: true });
+    }
+    await browser.tabs.update(tabId, { active: true });
+  } catch {
+    /* ignore */
   }
 }
 
@@ -164,6 +205,18 @@ async function handleStart() {
   scrolling = true;
   message = '';
   try {
+    const tabs = detached
+      ? await browser.tabs.query({ url: '*://*.instagram.com/*' })
+      : await browser.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs[0];
+    if (tab?.url) {
+      tabId = tab.id;
+      await currentSession.setValue({ sourceUrl: tab.url, startTime: Date.now(), tabId: tab.id });
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
     await sendMessage('startAutoScroll', undefined, tabId);
   } catch {
     scrolling = false;
@@ -202,6 +255,21 @@ async function handleDownload() {
 }
 
 async function confirmClear() {
+  const images = await scrapedImages.getValue();
+  const session = await currentSession.getValue();
+  if (images.length > 0) {
+    const entry: ScrapingSession = {
+      id: crypto.randomUUID(),
+      date: Date.now(),
+      sourceUrl: session?.sourceUrl ?? 'unknown',
+      thumbnailCount: images.length,
+      images,
+    };
+    const history = await scrapingHistory.getValue();
+    const updated = [entry, ...history].slice(0, 50);
+    await scrapingHistory.setValue(updated);
+  }
+  await currentSession.setValue(null);
   await scrapedImages.setValue([]);
   showClearModal = false;
   count = 0;
@@ -223,8 +291,8 @@ async function handleExport() {
 </script>
 
 <div class="flex flex-1 flex-col gap-4 p-4">
-  <BrandHeader {theme} {detached} {onToggleTheme} {onPopout}>
-    <div class="flex items-center gap-2">
+  <BrandHeader {theme} {detached} compact {onToggleTheme} {onPopout}>
+    {#snippet children()}
       <button
         type="button"
         class="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-secondary transition-colors hover:bg-surface-secondary hover:text-fg focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
@@ -246,15 +314,22 @@ async function handleExport() {
           <path d="m15 18-6-6 6-6" />
         </svg>
       </button>
-      <span
-        class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide
-          {connected
+    {/snippet}
+    {#snippet status()}
+      <button
+        type="button"
+        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide transition-colors hover:brightness-110 {connected
           ? 'bg-success/15 text-success'
           : 'bg-surface-secondary text-fg-muted'}"
+        onclick={switchToTab}
+        title={connected ? 'Switch to connected tab' : 'No Instagram tab found'}
       >
+        {#if connected}
+          <span class="h-1.5 w-1.5 rounded-full bg-success animate-pulse"></span>
+        {/if}
         {connected ? 'Connected' : 'Ready'}
-      </span>
-    </div>
+      </button>
+    {/snippet}
   </BrandHeader>
 
   <main class="flex flex-1 flex-col rounded-xl border border-border bg-surface p-6">
@@ -265,7 +340,7 @@ async function handleExport() {
 
     <StatsCard {count} {pop} />
 
-    <div class="mt-auto">
+    <div class="mt-4">
       <ActionBar
         {scrolling}
         {canDownload}
