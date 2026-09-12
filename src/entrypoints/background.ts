@@ -1,3 +1,10 @@
+import { onMessage } from '../lib/messaging';
+import { downloadFile } from '../lib/download';
+
 export default defineBackground(() => {
-  console.log('Hello background!', { id: browser.runtime.id });
+  onMessage('downloadCsv', async (message) => downloadFile(message.data));
+
+  browser.runtime.onInstalled.addListener(() => {
+    console.log('Instapper installed', { id: browser.runtime.id });
+  });
 });

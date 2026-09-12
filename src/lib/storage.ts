@@ -1,4 +1,4 @@
-import { storage } from 'wxt/storage';
+import { storage } from 'wxt/utils/storage';
 import type { ScrapedImages } from './types';
 
 /** Sumber tunggal data thumbnail yang dibagikan popup dan content script. */

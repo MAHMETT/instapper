@@ -13,4 +13,5 @@ export interface ProtocolMap {
   downloadCsv(payload: DownloadPayload): DownloadResult;
 }
 
-export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>();
+export const { sendMessage, onMessage, removeAllListeners } =
+  defineExtensionMessaging<ProtocolMap>();
