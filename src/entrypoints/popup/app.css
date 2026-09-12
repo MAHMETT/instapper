@@ -139,3 +139,33 @@
     scale: 1;
   }
 }
+
+/* ── Page slide animation ──────────────────────────────── */
+.page-wrapper {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+.page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease-out;
+}
+
+.page-active {
+  transform: translateX(0);
+  z-index: 1;
+}
+
+.page-hidden-left {
+  transform: translateX(-100%);
+  z-index: 0;
+}
+
+.page-hidden-right {
+  transform: translateX(100%);
+  z-index: 0;
+}

@@ -1,42 +1,21 @@
 <script lang="ts">
 import { browser } from 'wxt/browser';
-import { buildCsv, exportFilename } from '@/features/export/csv';
 import { getSenderTabId, isPopoutMode, openPopoutWindow } from '@/features/popout/popout';
 import { toggleTheme as doToggleTheme, getStoredTheme, type Theme } from '@/features/theme/theme';
-import { sendMessage } from '@/shared/messaging';
-import { exportJob, scrapedImages } from '@/shared/storage';
-import type { ExportProgress as ExportProgressType } from '@/shared/types';
-import ActionBar from './components/ActionBar.svelte';
+import BottomTabBar from './components/BottomTabBar.svelte';
 import BrandHeader from './components/BrandHeader.svelte';
-import ConfirmClearDialog from './components/ConfirmClearDialog.svelte';
-import StatsCard from './components/StatsCard.svelte';
+import AboutPage from './pages/AboutPage.svelte';
+import ExtractPage from './pages/ExtractPage.svelte';
+import HistoryPage from './pages/HistoryPage.svelte';
+import HomePage from './pages/HomePage.svelte';
 
 // ── State ────────────────────────────────────────────────
 const detached = $state(isPopoutMode());
+let activeTab = $state<'home' | 'history' | 'about'>('home');
+let subPage = $state<string | null>(null);
 let connected = $state(false);
-let count = $state(0);
-let scrolling = $state(false);
-let message = $state('');
-let messageType = $state<'info' | 'error'>('info');
-let showClearModal = $state(false);
 let tabId = $state<number | undefined>(undefined);
-let prevCount = $state(0);
-let pop = $state(false);
-let popTimer: ReturnType<typeof setTimeout> | undefined;
 let theme = $state<Theme>(getStoredTheme());
-
-// Export state
-let exporting = $state(false);
-let exportProgress = $state<ExportProgressType | null>(null);
-
-// ── Derived ──────────────────────────────────────────────
-const badgeText = $derived(connected ? 'Connected' : 'Ready');
-const canDownload = $derived(count > 0);
-const exportPercent = $derived(
-  exportProgress && exportProgress.total > 0
-    ? Math.round((exportProgress.done / exportProgress.total) * 100)
-    : 0,
-);
 
 // ── Tab resolution ───────────────────────────────────────
 async function resolveTab(): Promise<void> {
@@ -50,12 +29,10 @@ async function resolveTab(): Promise<void> {
           connected = true;
           return;
         }
-        // Tab exists but not Instagram — fall through to fallback
       } catch {
         /* tab closed — try fallback */
       }
     }
-    // Fallback: find any Instagram tab across all windows
     try {
       const tabs = await browser.tabs.query({ url: '*://*.instagram.com/*' });
       const tab = tabs[0];
@@ -80,99 +57,30 @@ async function resolveTab(): Promise<void> {
 
 // ── Effects ──────────────────────────────────────────────
 
-// Animate stat pop on count change
-$effect(() => {
-  if (count !== prevCount && prevCount > 0) {
-    pop = true;
-    clearTimeout(popTimer);
-    popTimer = setTimeout(() => {
-      pop = false;
-    }, 300);
-  }
-  prevCount = count;
-});
-
-// Escape key closes modal / cancels export
-$effect(() => {
-  function onKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      if (exporting) {
-        sendMessage('cancelExport');
-      } else if (showClearModal) {
-        showClearModal = false;
-      }
-    }
-  }
-  window.addEventListener('keydown', onKeydown);
-  return () => window.removeEventListener('keydown', onKeydown);
-});
-
 // Apply detached class to body for layout adaptation
 $effect(() => {
   if (detached) document.body.classList.add('detached');
   return () => document.body.classList.remove('detached');
 });
 
-// Initialize: target tab, count, scrolling state
+// Initialize
 $effect(() => {
-  resolveTab().then(() => {
-    scrapedImages.getValue().then((images) => {
-      count = images.length;
-    });
-
-    if (connected && tabId !== undefined) {
-      sendMessage('getStatus', undefined, tabId)
-        .then((res) => {
-          scrolling = res.isScrolling;
-        })
-        .catch(() => {});
-    }
-  });
-
-  const unwatch = scrapedImages.watch((images) => {
-    count = images.length;
-  });
-
-  const unwatchJob = exportJob.watch((state) => {
-    if (state.status === 'running') {
-      exporting = true;
-      if (state.phase === 'fetching' || state.phase === 'zipping') {
-        exportProgress = { phase: state.phase, done: state.done, total: state.total };
-      }
-      message = '';
-    } else if (state.status === 'done') {
-      exporting = false;
-      exportProgress = null;
-      if (state.failed > 0) {
-        message = `Exported ${state.total - state.failed} images, ${state.failed} failed.`;
-        messageType = 'error';
-      } else {
-        message = `Exported ${state.total} images.`;
-        messageType = 'info';
-      }
-    } else if (state.status === 'error') {
-      exporting = false;
-      exportProgress = null;
-      message = state.error || 'Export failed.';
-      messageType = 'error';
-    } else {
-      // idle
-      if (exporting) {
-        exporting = false;
-        exportProgress = null;
-        message = 'Export canceled.';
-        messageType = 'info';
-      }
-    }
-  });
-
-  return () => {
-    unwatch();
-    unwatchJob();
-  };
+  resolveTab();
 });
 
-// ── Handlers ─────────────────────────────────────────────
+// ── Navigation ───────────────────────────────────────────
+function handleTabChange(tab: string) {
+  activeTab = tab as 'home' | 'history' | 'about';
+  subPage = null;
+}
+
+function handleNavigate(page: string) {
+  subPage = page;
+}
+
+function handleBack() {
+  subPage = null;
+}
 
 function handleToggleTheme() {
   theme = doToggleTheme();
@@ -181,114 +89,34 @@ function handleToggleTheme() {
 async function handlePopout() {
   await openPopoutWindow(tabId);
 }
-
-async function handleStart() {
-  if (tabId === undefined || !connected) return;
-  scrolling = true;
-  message = '';
-  try {
-    await sendMessage('startAutoScroll', undefined, tabId);
-  } catch {
-    scrolling = false;
-    message = 'Refresh the Instagram page and try again.';
-    messageType = 'error';
-  }
-}
-
-async function handleStop() {
-  if (tabId === undefined) return;
-  try {
-    await sendMessage('stopAutoScroll', undefined, tabId);
-  } catch {
-    /* content script may not be present */
-  }
-  scrolling = false;
-}
-
-async function handleDownload() {
-  const images = await scrapedImages.getValue();
-  if (images.length === 0) return;
-  const csv = buildCsv(images);
-  const filename = exportFilename('csv');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const blobUrl = URL.createObjectURL(blob);
-  try {
-    await browser.downloads.download({ url: blobUrl, filename, saveAs: true });
-    message = 'Download started.';
-    messageType = 'info';
-  } catch {
-    message = 'Download failed.';
-    messageType = 'error';
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-  }
-}
-
-async function confirmClear() {
-  await scrapedImages.setValue([]);
-  showClearModal = false;
-  count = 0;
-  message = 'Data cleared.';
-  messageType = 'info';
-}
-
-async function handleExport() {
-  if (exporting) return;
-  const images = await scrapedImages.getValue();
-  if (images.length === 0) return;
-
-  exporting = true;
-  exportProgress = null;
-  message = '';
-
-  await sendMessage('startExport', images);
-}
 </script>
 
-<div class="flex flex-col gap-4 p-4 {detached ? 'min-h-screen' : 'min-h-[500px]'}">
-  <BrandHeader
-    {connected}
-    {theme}
-    {detached}
-    onToggleTheme={handleToggleTheme}
-    onPopout={handlePopout}
-  />
-
-  <main class="flex flex-1 flex-col rounded-xl border border-border bg-surface p-6">
-    <div class="mb-5">
-      <h1 class="text-lg font-bold text-fg">Extract thumbnails</h1>
-      <p class="mt-1 text-sm text-fg-secondary">Grab thumbnails. Instantly.</p>
-    </div>
-
-    <StatsCard {count} {pop} />
-
-    <div class="mt-auto">
-      <ActionBar
-        {scrolling}
-        {canDownload}
-        {exporting}
-        {exportProgress}
-        {exportPercent}
-        onStart={handleStart}
-        onStop={handleStop}
-        onDownload={handleDownload}
-        onExport={handleExport}
-        onExportCancel={() => sendMessage('cancelExport')}
-        onClear={() => (showClearModal = true)}
-      />
-
-      {#if message}
-        <p
-          class="mt-3 text-center text-xs min-h-[18px] {messageType === 'error'
-            ? 'text-danger'
-            : 'text-fg-muted'}"
-          aria-live="polite"
-        >
-          {message}
-        </p>
+<div class="flex flex-col {detached ? 'min-h-screen' : 'min-h-[500px]'}">
+  <div class="page-wrapper">
+    <!-- Main pages (home/history/about) -->
+    <div class="page {subPage === null ? 'page-active' : 'page-hidden-left'}">
+      <BrandHeader {theme} {detached} onToggleTheme={handleToggleTheme} onPopout={handlePopout} />
+      {#if activeTab === 'home'}
+        <HomePage onNavigate={handleNavigate} />
+      {:else if activeTab === 'history'}
+        <HistoryPage />
+      {:else}
+        <AboutPage />
       {/if}
     </div>
-  </main>
 
-  <ConfirmClearDialog bind:open={showClearModal} onConfirm={confirmClear} />
+    <!-- Extract sub-page -->
+    <div class="page {subPage === 'extract' ? 'page-active' : 'page-hidden-right'}">
+      <ExtractPage
+        onBack={handleBack}
+        {connected}
+        {theme}
+        {detached}
+        onToggleTheme={handleToggleTheme}
+        onPopout={handlePopout}
+      />
+    </div>
+  </div>
+
+  <BottomTabBar {activeTab} onTabChange={handleTabChange} />
 </div>

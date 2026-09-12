@@ -3,17 +3,17 @@ import type { Theme } from '@/features/theme/theme';
 import ThemeToggle from './ThemeToggle.svelte';
 
 let {
-  connected,
   theme,
   detached,
   onToggleTheme,
   onPopout,
+  children,
 }: {
-  connected: boolean;
   theme: Theme;
   detached: boolean;
   onToggleTheme: () => void;
   onPopout: () => void;
+  children?: import('svelte').Snippet;
 } = $props();
 </script>
 
@@ -29,14 +29,9 @@ let {
     </span>
   </div>
   <div class="flex items-center gap-2">
-    <span
-      class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide
-        {connected
-        ? 'bg-success/15 text-success'
-        : 'bg-surface-secondary text-fg-muted'}"
-    >
-      {connected ? 'Connected' : 'Ready'}
-    </span>
+    {#if children}
+      {@render children()}
+    {/if}
     {#if !detached}
       <button
         type="button"
