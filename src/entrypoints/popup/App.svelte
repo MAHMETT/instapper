@@ -1,6 +1,7 @@
 <script lang="ts">
 import { browser } from 'wxt/browser';
 import { buildCsv, exportFilename } from '@/features/export/csv';
+import { getSenderTabId, isPopoutMode, openPopoutWindow } from '@/features/popout/popout';
 import { toggleTheme as doToggleTheme, getStoredTheme, type Theme } from '@/features/theme/theme';
 import { sendMessage } from '@/shared/messaging';
 import { exportJob, scrapedImages } from '@/shared/storage';
@@ -11,6 +12,7 @@ import ConfirmClearDialog from './components/ConfirmClearDialog.svelte';
 import StatsCard from './components/StatsCard.svelte';
 
 // ── State ────────────────────────────────────────────────
+const detached = $state(isPopoutMode());
 let connected = $state(false);
 let count = $state(0);
 let scrolling = $state(false);
@@ -35,6 +37,46 @@ const exportPercent = $derived(
     ? Math.round((exportProgress.done / exportProgress.total) * 100)
     : 0,
 );
+
+// ── Tab resolution ───────────────────────────────────────
+async function resolveTab(): Promise<void> {
+  if (detached) {
+    const senderTabId = getSenderTabId();
+    if (senderTabId) {
+      try {
+        const tab = await browser.tabs.get(senderTabId);
+        if (tab.url?.includes('instagram.com')) {
+          tabId = tab.id;
+          connected = true;
+          return;
+        }
+        // Tab exists but not Instagram — fall through to fallback
+      } catch {
+        /* tab closed — try fallback */
+      }
+    }
+    // Fallback: find any Instagram tab across all windows
+    try {
+      const tabs = await browser.tabs.query({ url: '*://*.instagram.com/*' });
+      const tab = tabs[0];
+      if (tab) {
+        tabId = tab.id;
+        connected = true;
+        return;
+      }
+    } catch {
+      /* no instagram tab */
+    }
+    tabId = undefined;
+    connected = false;
+  } else {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs[0];
+    if (!tab) return;
+    tabId = tab.id;
+    connected = !!tab.url?.includes('instagram.com');
+  }
+}
 
 // ── Effects ──────────────────────────────────────────────
 
@@ -65,20 +107,21 @@ $effect(() => {
   return () => window.removeEventListener('keydown', onKeydown);
 });
 
-// Initialize: active tab, count, scrolling state
+// Apply detached class to body for layout adaptation
 $effect(() => {
-  browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
-    const tab = tabs[0];
-    if (!tab) return;
-    tabId = tab.id;
-    connected = !!tab.url?.includes('instagram.com');
+  if (detached) document.body.classList.add('detached');
+  return () => document.body.classList.remove('detached');
+});
 
+// Initialize: target tab, count, scrolling state
+$effect(() => {
+  resolveTab().then(() => {
     scrapedImages.getValue().then((images) => {
       count = images.length;
     });
 
-    if (connected && tab.id !== undefined) {
-      sendMessage('getStatus', undefined, tab.id)
+    if (connected && tabId !== undefined) {
+      sendMessage('getStatus', undefined, tabId)
         .then((res) => {
           scrolling = res.isScrolling;
         })
@@ -135,8 +178,12 @@ function handleToggleTheme() {
   theme = doToggleTheme();
 }
 
+async function handlePopout() {
+  await openPopoutWindow(tabId);
+}
+
 async function handleStart() {
-  if (tabId === undefined) return;
+  if (tabId === undefined || !connected) return;
   scrolling = true;
   message = '';
   try {
@@ -198,8 +245,14 @@ async function handleExport() {
 }
 </script>
 
-<div class="flex min-h-[500px] flex-col gap-4 p-4">
-  <BrandHeader {connected} {theme} onToggleTheme={handleToggleTheme} />
+<div class="flex flex-col gap-4 p-4 {detached ? 'min-h-screen' : 'min-h-[500px]'}">
+  <BrandHeader
+    {connected}
+    {theme}
+    {detached}
+    onToggleTheme={handleToggleTheme}
+    onPopout={handlePopout}
+  />
 
   <main class="flex flex-1 flex-col rounded-xl border border-border bg-surface p-6">
     <div class="mb-5">
