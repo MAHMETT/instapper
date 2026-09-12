@@ -21,7 +21,7 @@ import { ExternalLink } from 'lucide-svelte';
     <dl class="flex flex-col gap-3 text-sm">
       <div class="flex items-center justify-between">
         <dt class="text-fg-muted">Version</dt>
-        <dd class="font-mono text-xs text-fg-secondary">1.1.0</dd>
+        <dd class="font-mono text-xs text-fg-secondary">1.1.2</dd>
       </div>
       <div class="h-px bg-border"></div>
       <div class="flex flex-col gap-1.5">
