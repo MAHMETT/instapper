@@ -1,0 +1,10 @@
+pre-commit:
+  jobs:
+    - name: biome-check
+      run: bunx @biomejs/biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+
+pre-push:
+  jobs:
+    - name: typecheck
+      run: bun run check
