@@ -6,8 +6,7 @@ export default defineConfig({
   modules: ['@wxt-dev/module-svelte'],
   manifest: {
     name: 'Instapper — Instagram Scraper',
-    description:
-      'Scrape and export image thumbnails from Instagram hashtag and profile pages.',
+    description: 'Scrape and export image thumbnails from Instagram hashtag and profile pages.',
     permissions: ['storage', 'downloads', 'activeTab'],
     host_permissions: ['https://*.instagram.com/*'],
     icons: {

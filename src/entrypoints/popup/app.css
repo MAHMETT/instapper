@@ -14,18 +14,13 @@ body {
 body {
   width: 340px;
   min-height: 500px;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, sans-serif;
+  font-family:
+    "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #e4e4e7;
   background:
     radial-gradient(ellipse at 20% 0%, rgba(240, 148, 51, 0.1) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 0%, rgba(220, 39, 67, 0.1) 0%, transparent 50%),
-    radial-gradient(
-      ellipse at 50% 100%,
-      rgba(188, 24, 136, 0.08) 0%,
-      transparent 50%
-    ),
-    #0c0c14;
+    radial-gradient(ellipse at 50% 100%, rgba(188, 24, 136, 0.08) 0%, transparent 50%), #0c0c14;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

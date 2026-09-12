@@ -7,9 +7,7 @@ export function buildDataUrl(data: string, filename: string): string {
   return `data:${mime};charset=utf-8,${encodeURIComponent(data)}`;
 }
 
-export async function downloadFile(
-  payload: DownloadPayload,
-): Promise<DownloadResult> {
+export async function downloadFile(payload: DownloadPayload): Promise<DownloadResult> {
   try {
     const url = buildDataUrl(payload.data, payload.filename);
     await browser.downloads.download({

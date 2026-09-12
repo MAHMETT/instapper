@@ -1,5 +1,5 @@
+import { isScrolling, start, stop } from '../lib/auto-scroller';
 import { onMessage, removeAllListeners } from '../lib/messaging';
-import { start, stop, isScrolling } from '../lib/auto-scroller';
 
 export default defineContentScript({
   matches: ['https://*.instagram.com/*'],

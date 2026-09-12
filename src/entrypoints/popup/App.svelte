@@ -1,134 +1,133 @@
 <script lang="ts">
-  import { scrapedImages } from '../../lib/storage'
-  import { sendMessage } from '../../lib/messaging'
-  import { browser } from 'wxt/browser'
+import { browser } from 'wxt/browser';
+import { sendMessage } from '../../lib/messaging';
+import { scrapedImages } from '../../lib/storage';
 
-  let connected = $state(false)
-  let count = $state(0)
-  let scrolling = $state(false)
-  let message = $state('')
-  let messageType = $state<'info' | 'error'>('info')
-  let showClearModal = $state(false)
-  let tabId = $state<number | undefined>(undefined)
-  let prevCount = $state(0)
-  let pop = $state(false)
-  let popTimer: ReturnType<typeof setTimeout> | undefined
-  let cancelBtnEl = $state<HTMLButtonElement | null>(null)
+let connected = $state(false);
+let count = $state(0);
+let scrolling = $state(false);
+let message = $state('');
+let messageType = $state<'info' | 'error'>('info');
+let showClearModal = $state(false);
+let tabId = $state<number | undefined>(undefined);
+let prevCount = $state(0);
+let pop = $state(false);
+let popTimer: ReturnType<typeof setTimeout> | undefined;
+let cancelBtnEl = $state<HTMLButtonElement | null>(null);
 
-  const badgeText = $derived(connected ? 'Connected' : 'Ready')
-  const canDownload = $derived(count > 0)
+const badgeText = $derived(connected ? 'Connected' : 'Ready');
+const canDownload = $derived(count > 0);
 
-  // Animate stat pop on count change
-  $effect(() => {
-    if (count !== prevCount && prevCount > 0) {
-      pop = true
-      clearTimeout(popTimer)
-      popTimer = setTimeout(() => {
-        pop = false
-      }, 300)
-    }
-    prevCount = count
-  })
+// Animate stat pop on count change
+$effect(() => {
+  if (count !== prevCount && prevCount > 0) {
+    pop = true;
+    clearTimeout(popTimer);
+    popTimer = setTimeout(() => {
+      pop = false;
+    }, 300);
+  }
+  prevCount = count;
+});
 
-  // Focus cancel button when modal opens
-  $effect(() => {
-    if (showClearModal) {
-      cancelBtnEl?.focus()
-    }
-  })
+// Focus cancel button when modal opens
+$effect(() => {
+  if (showClearModal) {
+    cancelBtnEl?.focus();
+  }
+});
 
-  // Escape key closes modal
-  $effect(() => {
-    function onKeydown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && showClearModal) {
-        showClearModal = false
-      }
-    }
-    window.addEventListener('keydown', onKeydown)
-    return () => window.removeEventListener('keydown', onKeydown)
-  })
-
-  // Initialize: active tab, count, scrolling state
-  $effect(() => {
-    browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
-      const tab = tabs[0]
-      if (!tab) return
-      tabId = tab.id
-      connected = !!tab.url?.includes('instagram.com')
-
-      scrapedImages.getValue().then((images) => {
-        count = images.length
-      })
-
-      if (connected && tab.id !== undefined) {
-        sendMessage('getStatus', undefined, tab.id)
-          .then((res) => {
-            scrolling = res.isScrolling
-          })
-          .catch(() => {})
-      }
-    })
-
-    const unwatch = scrapedImages.watch((images) => {
-      count = images.length
-    })
-
-    return () => {
-      unwatch()
-    }
-  })
-
-  async function handleStart() {
-    if (tabId === undefined) return
-    scrolling = true
-    message = ''
-    try {
-      await sendMessage('startAutoScroll', undefined, tabId)
-    } catch {
-      scrolling = false
-      message = 'Refresh the Instagram page and try again.'
-      messageType = 'error'
+// Escape key closes modal
+$effect(() => {
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && showClearModal) {
+      showClearModal = false;
     }
   }
+  window.addEventListener('keydown', onKeydown);
+  return () => window.removeEventListener('keydown', onKeydown);
+});
 
-  async function handleStop() {
-    if (tabId === undefined) return
-    try {
-      await sendMessage('stopAutoScroll', undefined, tabId)
-    } catch {
-      /* content script may not be present */
+// Initialize: active tab, count, scrolling state
+$effect(() => {
+  browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+    const tab = tabs[0];
+    if (!tab) return;
+    tabId = tab.id;
+    connected = !!tab.url?.includes('instagram.com');
+
+    scrapedImages.getValue().then((images) => {
+      count = images.length;
+    });
+
+    if (connected && tab.id !== undefined) {
+      sendMessage('getStatus', undefined, tab.id)
+        .then((res) => {
+          scrolling = res.isScrolling;
+        })
+        .catch(() => {});
     }
-    scrolling = false
-  }
+  });
 
-  async function handleDownload() {
-    const images = await scrapedImages.getValue()
-    if (images.length === 0) return
-    const csv =
-      '\uFEFF"Image URL"\n' + images.map((u) => `"${u}"`).join('\n')
-    const filename = `instapper_thumbnails_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`
-    try {
-      const res = await sendMessage('downloadCsv', { data: csv, filename })
-      if (res.success) {
-        message = 'Download started.'
-        messageType = 'info'
-      } else {
-        message = res.error || 'Download failed.'
-        messageType = 'error'
-      }
-    } catch {
-      message = 'Download failed.'
-      messageType = 'error'
+  const unwatch = scrapedImages.watch((images) => {
+    count = images.length;
+  });
+
+  return () => {
+    unwatch();
+  };
+});
+
+async function handleStart() {
+  if (tabId === undefined) return;
+  scrolling = true;
+  message = '';
+  try {
+    await sendMessage('startAutoScroll', undefined, tabId);
+  } catch {
+    scrolling = false;
+    message = 'Refresh the Instagram page and try again.';
+    messageType = 'error';
+  }
+}
+
+async function handleStop() {
+  if (tabId === undefined) return;
+  try {
+    await sendMessage('stopAutoScroll', undefined, tabId);
+  } catch {
+    /* content script may not be present */
+  }
+  scrolling = false;
+}
+
+async function handleDownload() {
+  const images = await scrapedImages.getValue();
+  if (images.length === 0) return;
+  const csv = `\uFEFF"Image URL"\n${images.map((u) => `"${u}"`).join('\n')}`;
+  const filename = `instapper_thumbnails_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+  try {
+    const res = await sendMessage('downloadCsv', { data: csv, filename });
+    if (res.success) {
+      message = 'Download started.';
+      messageType = 'info';
+    } else {
+      message = res.error || 'Download failed.';
+      messageType = 'error';
     }
+  } catch {
+    message = 'Download failed.';
+    messageType = 'error';
   }
+}
 
-  async function confirmClear() {
-    await scrapedImages.setValue([])
-    showClearModal = false
-    count = 0
-    message = 'Data cleared.'
-    messageType = 'info'
-  }
+async function confirmClear() {
+  await scrapedImages.setValue([]);
+  showClearModal = false;
+  count = 0;
+  message = 'Data cleared.';
+  messageType = 'info';
+}
 </script>
 
 <div class="popup">
@@ -177,9 +176,7 @@
     <!-- Actions -->
     <div class="actions">
       {#if scrolling}
-        <button type="button" class="btn btn-danger" onclick={handleStop}>
-          Stop Scrolling
-        </button>
+        <button type="button" class="btn btn-danger" onclick={handleStop}>Stop Scrolling</button>
       {:else}
         <button type="button" class="btn btn-primary" onclick={handleStart}>
           Auto Scroll & Scrape
@@ -209,11 +206,7 @@
   <!-- Clear confirmation modal -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="modal-overlay"
-    class:active={showClearModal}
-    onclick={() => (showClearModal = false)}
-  >
+  <div class="modal-overlay" class:active={showClearModal} onclick={() => (showClearModal = false)}>
     <div
       class="modal"
       onclick={(e) => e.stopPropagation()}
@@ -233,322 +226,320 @@
         >
           Cancel
         </button>
-        <button type="button" class="btn btn-danger" onclick={confirmClear}>
-          Clear
-        </button>
+        <button type="button" class="btn btn-danger" onclick={confirmClear}>Clear</button>
       </div>
     </div>
   </div>
 </div>
 
 <style>
-  .popup {
-    display: flex;
-    flex-direction: column;
-    min-height: 500px;
-    padding: 16px;
-    gap: 16px;
-  }
+.popup {
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+  padding: 16px;
+  gap: 16px;
+}
 
-  /* ── Header ── */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
 
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-  .logo-icon {
-    flex-shrink: 0;
-  }
+.logo-icon {
+  flex-shrink: 0;
+}
 
-  .brand-name {
-    font-weight: 700;
-    font-size: 15px;
-    background: linear-gradient(135deg, #f09433, #dc2743, #bc1888);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
+.brand-name {
+  font-weight: 700;
+  font-size: 15px;
+  background: linear-gradient(135deg, #f09433, #dc2743, #bc1888);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
-  .badge {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 4px 10px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #a1a1aa;
-  }
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
+}
 
-  .badge.connected {
-    background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
-  }
+.badge.connected {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
 
-  /* ── Content ── */
-  .content {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
-    padding: 24px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
+/* ── Content ── */
+.content {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
 
-  .intro {
-    margin-bottom: 20px;
-  }
+.intro {
+  margin-bottom: 20px;
+}
 
-  .intro h1 {
-    font-size: 18px;
-    font-weight: 700;
-    color: #fafafa;
-    margin-bottom: 6px;
-  }
+.intro h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fafafa;
+  margin-bottom: 6px;
+}
 
-  .intro p {
-    font-size: 13px;
-    color: #71717a;
-    line-height: 1.5;
-  }
+.intro p {
+  font-size: 13px;
+  color: #71717a;
+  line-height: 1.5;
+}
 
-  /* ── Stats ── */
-  .stats-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
-    padding: 20px;
-    margin-bottom: 24px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
+/* ── Stats ── */
+.stats-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
 
-  .stat-value {
-    font-size: 36px;
-    font-weight: 800;
-    line-height: 1;
-    background: linear-gradient(135deg, #f09433, #dc2743, #bc1888);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
+.stat-value {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(135deg, #f09433, #dc2743, #bc1888);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
-  .stat-value.pop {
-    animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
+.stat-value.pop {
+  animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
-  .stat-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: #71717a;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
+.stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 
-  @keyframes pop {
-    0% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.15);
-    }
-    100% {
-      transform: scale(1);
-    }
-  }
-
-  /* ── Buttons ── */
-  .actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: auto;
-  }
-
-  .btn {
-    border: none;
-    padding: 12px 16px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition:
-      transform 0.15s ease,
-      box-shadow 0.15s ease,
-      opacity 0.15s ease,
-      background 0.15s ease;
-    text-align: center;
-    font-family: inherit;
-    color: inherit;
-  }
-
-  .btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, #f09433, #dc2743, #bc1888);
-    color: #fff;
-    box-shadow: 0 4px 16px rgba(220, 39, 67, 0.3);
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(220, 39, 67, 0.4);
-  }
-
-  .btn-primary:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(220, 39, 67, 0.2);
-  }
-
-  .btn-danger {
-    background: rgba(220, 39, 67, 0.15);
-    color: #f87171;
-    border: 1px solid rgba(220, 39, 67, 0.3);
-  }
-
-  .btn-danger:hover:not(:disabled) {
-    background: rgba(220, 39, 67, 0.25);
-    transform: translateY(-1px);
-  }
-
-  .btn-danger:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  .btn-secondary {
-    background: rgba(255, 255, 255, 0.06);
-    color: #d4d4d8;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-1px);
-  }
-
-  .btn-secondary:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  .btn-text {
-    background: none;
-    border: none;
-    color: #52525b;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 4px;
-    cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    text-decoration-color: transparent;
-    transition:
-      color 0.15s ease,
-      text-decoration-color 0.15s ease;
-    font-family: inherit;
-  }
-
-  .btn-text:hover {
-    color: #a1a1aa;
-    text-decoration-color: currentColor;
-  }
-
-  /* ── Message ── */
-  .message {
-    margin-top: 12px;
-    font-size: 12px;
-    text-align: center;
-    color: #71717a;
-    min-height: 18px;
-  }
-
-  .message.error {
-    color: #f87171;
-  }
-
-  /* ── Modal ── */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
-  }
-
-  .modal-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .modal {
-    background: #18181b;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    padding: 24px;
-    width: calc(100% - 48px);
-    text-align: center;
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
-    transform: scale(0.95);
-    opacity: 0;
-    transition:
-      transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-      opacity 0.2s ease;
-  }
-
-  .modal-overlay.active .modal {
+@keyframes pop {
+  0% {
     transform: scale(1);
-    opacity: 1;
   }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
 
-  .modal h3 {
-    font-size: 16px;
-    font-weight: 700;
-    color: #fafafa;
-    margin-bottom: 6px;
-  }
+/* ── Buttons ── */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
 
-  .modal p {
-    font-size: 13px;
-    color: #71717a;
-    margin-bottom: 20px;
-    line-height: 1.5;
-  }
+.btn {
+  border: none;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease,
+    background 0.15s ease;
+  text-align: center;
+  font-family: inherit;
+  color: inherit;
+}
 
-  .modal-actions {
-    display: flex;
-    gap: 8px;
-  }
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
-  .modal-actions .btn {
-    flex: 1;
-    padding: 10px;
-    font-size: 13px;
-  }
+.btn-primary {
+  background: linear-gradient(135deg, #f09433, #dc2743, #bc1888);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(220, 39, 67, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(220, 39, 67, 0.4);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(220, 39, 67, 0.2);
+}
+
+.btn-danger {
+  background: rgba(220, 39, 67, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(220, 39, 67, 0.3);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(220, 39, 67, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: #d4d4d8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #52525b;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: transparent;
+  transition:
+    color 0.15s ease,
+    text-decoration-color 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-text:hover {
+  color: #a1a1aa;
+  text-decoration-color: currentColor;
+}
+
+/* ── Message ── */
+.message {
+  margin-top: 12px;
+  font-size: 12px;
+  text-align: center;
+  color: #71717a;
+  min-height: 18px;
+}
+
+.message.error {
+  color: #f87171;
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  width: calc(100% - 48px);
+  text-align: center;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  transform: scale(0.95);
+  opacity: 0;
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.2s ease;
+}
+
+.modal-overlay.active .modal {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.modal h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fafafa;
+  margin-bottom: 6px;
+}
+
+.modal p {
+  font-size: 13px;
+  color: #71717a;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.modal-actions .btn {
+  flex: 1;
+  padding: 10px;
+  font-size: 13px;
+}
 </style>

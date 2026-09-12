@@ -10,7 +10,9 @@ export function findImages(): string[] {
   }
 
   if (urls.size === 0) {
-    for (const img of document.querySelectorAll<HTMLImageElement>(CONFIG.SELECTORS.FALLBACK_IMAGES)) {
+    for (const img of document.querySelectorAll<HTMLImageElement>(
+      CONFIG.SELECTORS.FALLBACK_IMAGES,
+    )) {
       if (img.src) urls.add(img.src);
     }
   }
@@ -19,7 +21,10 @@ export function findImages(): string[] {
 }
 
 /** Merge found URLs into the existing list, returning only genuinely new entries. */
-export function getUniqueImages(existing: string[], found: string[]): { updatedList: string[]; addedCount: number } {
+export function getUniqueImages(
+  existing: string[],
+  found: string[],
+): { updatedList: string[]; addedCount: number } {
   const set = new Set(existing);
   let addedCount = 0;
 
