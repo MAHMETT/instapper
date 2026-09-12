@@ -8,7 +8,11 @@ export default defineConfig({
     name: 'Instapper — Instagram Scraper',
     description: 'Scrape and export image thumbnails from Instagram hashtag and profile pages.',
     permissions: ['storage', 'downloads', 'activeTab'],
-    host_permissions: ['https://*.instagram.com/*'],
+    host_permissions: [
+      'https://*.instagram.com/*',
+      'https://*.cdninstagram.com/*',
+      'https://*.fbcdn.net/*',
+    ],
     icons: {
       16: '/icon/16.png',
       32: '/icon/32.png',

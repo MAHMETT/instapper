@@ -12,3 +12,18 @@ export interface DownloadResult {
   success: boolean;
   error?: string;
 }
+
+/** Progres export gambar ke ZIP. */
+export interface ExportProgress {
+  phase: 'fetching' | 'zipping';
+  done: number;
+  total: number;
+}
+
+/** Hasil export gambar ke ZIP. */
+export interface ExportResult {
+  ok: boolean;
+  total: number;
+  failed: number;
+  error?: string;
+}

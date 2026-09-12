@@ -1,7 +1,9 @@
 <script lang="ts">
 import { browser } from 'wxt/browser';
+import { exportImagesZip } from '../../lib/export';
 import { sendMessage } from '../../lib/messaging';
 import { scrapedImages } from '../../lib/storage';
+import type { ExportProgress } from '../../lib/types';
 
 let connected = $state(false);
 let count = $state(0);
@@ -15,8 +17,18 @@ let pop = $state(false);
 let popTimer: ReturnType<typeof setTimeout> | undefined;
 let cancelBtnEl = $state<HTMLButtonElement | null>(null);
 
+// Export state
+let exporting = $state(false);
+let exportProgress = $state<ExportProgress | null>(null);
+let abortController = $state<AbortController | null>(null);
+
 const badgeText = $derived(connected ? 'Connected' : 'Ready');
 const canDownload = $derived(count > 0);
+const exportPercent = $derived(
+  exportProgress && exportProgress.total > 0
+    ? Math.round((exportProgress.done / exportProgress.total) * 100)
+    : 0,
+);
 
 // Animate stat pop on count change
 $effect(() => {
@@ -37,15 +49,26 @@ $effect(() => {
   }
 });
 
-// Escape key closes modal
+// Escape key closes modal / cancels export
 $effect(() => {
   function onKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && showClearModal) {
-      showClearModal = false;
+    if (e.key === 'Escape') {
+      if (exporting) {
+        abortController?.abort();
+      } else if (showClearModal) {
+        showClearModal = false;
+      }
     }
   }
   window.addEventListener('keydown', onKeydown);
   return () => window.removeEventListener('keydown', onKeydown);
+});
+
+// Abort export on popup teardown
+$effect(() => {
+  return () => {
+    abortController?.abort();
+  };
 });
 
 // Initialize: active tab, count, scrolling state
@@ -128,6 +151,47 @@ async function confirmClear() {
   message = 'Data cleared.';
   messageType = 'info';
 }
+
+async function handleExport() {
+  if (exporting) return;
+  const images = await scrapedImages.getValue();
+  if (images.length === 0) return;
+
+  const controller = new AbortController();
+  abortController = controller;
+  exporting = true;
+  exportProgress = null;
+  message = '';
+
+  try {
+    const result = await exportImagesZip(images, {
+      signal: controller.signal,
+      onProgress: (p) => {
+        exportProgress = p;
+      },
+    });
+
+    if (result.failed > 0) {
+      message = `Exported ${result.total - result.failed} images, ${result.failed} failed.`;
+      messageType = 'error';
+    } else {
+      message = `Exported ${result.total} images.`;
+      messageType = 'info';
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      message = 'Export canceled.';
+      messageType = 'info';
+    } else {
+      message = err instanceof Error ? err.message : 'Export failed.';
+      messageType = 'error';
+    }
+  } finally {
+    exporting = false;
+    exportProgress = null;
+    abortController = null;
+  }
+}
 </script>
 
 <div class="popup">
@@ -192,6 +256,48 @@ async function confirmClear() {
         Download CSV
       </button>
 
+      <button
+        type="button"
+        class="btn btn-secondary"
+        disabled={!canDownload || exporting}
+        onclick={handleExport}
+      >
+        Export ZIP
+      </button>
+
+      {#if exporting}
+        <div class="export-progress">
+          <div class="progress-track">
+            <div
+              class="progress-fill"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={exportPercent}
+              style="width: {exportPercent}%"
+            ></div>
+          </div>
+          <div class="progress-info">
+            {#if exportProgress?.phase === 'fetching'}
+              <span class="progress-label"
+                >Fetching {exportProgress.done}/{exportProgress.total}</span
+              >
+            {:else if exportProgress?.phase === 'zipping'}
+              <span class="progress-label">Creating ZIP&hellip;</span>
+            {:else}
+              <span class="progress-label">Starting&hellip;</span>
+            {/if}
+            <button
+              type="button"
+              class="btn-cancel-export"
+              onclick={() => abortController?.abort()}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      {/if}
+
       <button type="button" class="btn-text" onclick={() => (showClearModal = true)}>
         Clear Data
       </button>
@@ -199,7 +305,7 @@ async function confirmClear() {
 
     <!-- Status message -->
     {#if message}
-      <p class="message" class:error={messageType === 'error'}>{message}</p>
+      <p class="message" class:error={messageType === 'error'} aria-live="polite">{message}</p>
     {/if}
   </main>
 
@@ -541,5 +647,56 @@ async function confirmClear() {
   flex: 1;
   padding: 10px;
   font-size: 13px;
+}
+
+/* ── Export Progress ── */
+.export-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #f09433, #dc2743, #bc1888);
+  transition: width 0.2s ease;
+}
+
+.progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.btn-cancel-export {
+  background: none;
+  border: none;
+  color: #f87171;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+
+.btn-cancel-export:hover {
+  color: #fca5a5;
 }
 </style>
