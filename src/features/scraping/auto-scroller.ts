@@ -8,11 +8,11 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let observer: MutationObserver | null = null;
 
 function performScroll(): void {
-  window.scrollTo(0, document.body.scrollHeight);
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
   const main = document.querySelector<HTMLElement>(CONFIG.SELECTORS.MAIN_CONTAINER);
   if (main) {
-    main.scrollTop = main.scrollHeight;
+    main.scrollTo({ top: main.scrollHeight, behavior: 'smooth' });
   }
 }
 
