@@ -9,6 +9,11 @@
   "files": {
     "includes": ["**", "!!**/.output", "!!**/.wxt", "!!**/*.d.ts"]
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "html": {
     "experimentalFullSupportEnabled": true,
     "formatter": { "enabled": true }
