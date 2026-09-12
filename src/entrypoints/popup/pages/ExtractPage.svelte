@@ -1,6 +1,7 @@
 <script lang="ts">
 import { browser } from 'wxt/browser';
 import { buildCsv, exportFilename } from '@/features/export/csv';
+import { exportImagesZip } from '@/features/export/export';
 import { isPopoutMode } from '@/features/popout/popout';
 import type { Theme } from '@/features/theme/theme';
 import { sendMessage } from '@/shared/messaging';
@@ -40,6 +41,7 @@ let popTimer: ReturnType<typeof setTimeout> | undefined;
 // Export state
 let exporting = $state(false);
 let exportProgress = $state<ExportProgressType | null>(null);
+let abortController = $state<AbortController | null>(null);
 
 // ── Derived ──────────────────────────────────────────────
 const canDownload = $derived(count > 0);
@@ -282,11 +284,40 @@ async function handleExport() {
   const images = await scrapedImages.getValue();
   if (images.length === 0) return;
 
+  const controller = new AbortController();
+  abortController = controller;
   exporting = true;
   exportProgress = null;
   message = '';
 
-  await sendMessage('startExport', images);
+  try {
+    const result = await exportImagesZip(images, {
+      signal: controller.signal,
+      onProgress: (p) => {
+        exportProgress = p;
+      },
+    });
+
+    if (result.failed > 0) {
+      message = `Exported ${result.total - result.failed} images, ${result.failed} failed.`;
+      messageType = 'error';
+    } else {
+      message = `Exported ${result.total} images.`;
+      messageType = 'info';
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      message = 'Export canceled.';
+      messageType = 'info';
+    } else {
+      message = err instanceof Error ? err.message : 'Export failed.';
+      messageType = 'error';
+    }
+  } finally {
+    exporting = false;
+    exportProgress = null;
+    abortController = null;
+  }
 }
 </script>
 
@@ -351,7 +382,7 @@ async function handleExport() {
         onStop={handleStop}
         onDownload={handleDownload}
         onExport={handleExport}
-        onExportCancel={() => sendMessage('cancelExport')}
+        onExportCancel={() => abortController?.abort()}
         onClear={() => (showClearModal = true)}
       />
 
