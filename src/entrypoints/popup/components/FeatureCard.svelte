@@ -1,11 +1,13 @@
 <script lang="ts">
+import type { Component } from 'svelte';
+
 let {
-  icon,
+  Icon,
   title,
   description,
   onClick,
 }: {
-  icon: string;
+  Icon: Component;
   title: string;
   description: string;
   onClick: () => void;
@@ -18,9 +20,9 @@ let {
   onclick={onClick}
 >
   <span
-    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-indigo/10 text-brand-indigo transition-colors group-hover:bg-brand-indigo/20 [&>svg]:pointer-events-none [&>svg]:shrink-0"
+    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-indigo/10 text-brand-indigo transition-colors group-hover:bg-brand-indigo/20"
   >
-    {@html icon}
+    <Icon size={20} />
   </span>
   <div class="flex flex-col gap-0.5">
     <span class="text-sm font-semibold text-fg">{title}</span>

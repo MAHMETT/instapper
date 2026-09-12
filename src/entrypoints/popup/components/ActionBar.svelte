@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Separator, Tooltip } from 'bits-ui';
+import { Download, Pause, Play } from 'lucide-svelte';
 import type { ExportProgress as ExportProgressType } from '@/shared/types';
 import ExportProgress from './ExportProgress.svelte';
 
@@ -45,20 +46,9 @@ const stopped = $derived(!scrolling && canDownload);
               class="flex w-full items-center justify-center gap-2 rounded-lg bg-danger/15 px-4 py-3 text-sm font-semibold text-danger border border-danger/30 transition-all hover:bg-danger/25 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
               onclick={onStop}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="6" y="4" width="4" height="16" rx="1" />
-                <rect x="14" y="4" width="4" height="16" rx="1" />
-              </svg>
+              <span class="transition-transform hover:scale-110 hover:rotate-[8deg]">
+                <Pause size={16} strokeWidth={2.5} />
+              </span>
               Pause
             </button>
           {/snippet}
@@ -86,17 +76,9 @@ const stopped = $derived(!scrolling && canDownload);
                 class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-linear-to-r from-brand-indigo to-brand-blue px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-indigo/25 transition-all hover:brightness-110 hover:-translate-y-0.5 hover:shadow-brand-indigo/35 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
                 onclick={onStart}
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11.04-6.86a1 1 0 0 0 0-1.72L9.5 4.28a1 1 0 0 0-1.5.86z"
-                  />
-                </svg>
+                <span class="transition-transform hover:scale-110">
+                  <Play size={16} fill="currentColor" />
+                </span>
                 Continue
               </button>
             {/snippet}
@@ -132,17 +114,9 @@ const stopped = $derived(!scrolling && canDownload);
               class="flex w-full items-center justify-center gap-2 rounded-lg bg-linear-to-r from-brand-indigo to-brand-blue px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-indigo/25 transition-all hover:brightness-110 hover:-translate-y-0.5 hover:shadow-brand-indigo/35 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-brand-indigo/25 disabled:hover:brightness-100"
               onclick={onStart}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11.04-6.86a1 1 0 0 0 0-1.72L9.5 4.28a1 1 0 0 0-1.5.86z"
-                />
-              </svg>
+              <span class="transition-transform hover:scale-110">
+                <Play size={16} fill="currentColor" />
+              </span>
               Start
             </button>
           {/snippet}
@@ -173,21 +147,13 @@ const stopped = $derived(!scrolling && canDownload);
               onclick={onDownload}
             >
               <span class="inline-flex items-center gap-1.5">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
+                <span
+                  class="inline-block transition-transform {canDownload
+                    ? 'animate-[bounce_0.6s_ease-in-out]'
+                    : ''} {canDownload ? '' : 'opacity-40'}"
                 >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" x2="12" y1="15" y2="3" />
-                </svg>
+                  <Download size={14} />
+                </span>
                 CSV
               </span>
             </button>
@@ -211,21 +177,13 @@ const stopped = $derived(!scrolling && canDownload);
       onclick={onExport}
     >
       <span class="inline-flex items-center gap-1.5">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
+        <span
+          class="inline-block transition-transform {canDownload && !exporting
+            ? 'animate-[bounce_0.6s_ease-in-out]'
+            : ''} {canDownload && !exporting ? '' : 'opacity-40'}"
         >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="7 10 12 15 17 10" />
-          <line x1="12" x2="12" y1="15" y2="3" />
-        </svg>
+          <Download size={14} />
+        </span>
         ZIP
       </span>
     </button>

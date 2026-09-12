@@ -1,4 +1,5 @@
 <script lang="ts">
+import { ChevronLeft } from 'lucide-svelte';
 import { browser } from 'wxt/browser';
 import { buildCsv, exportFilename } from '@/features/export/csv';
 import { exportImagesZip } from '@/features/export/export';
@@ -330,20 +331,7 @@ async function handleExport() {
         aria-label="Back to Home"
         onclick={onBack}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m15 18-6-6 6-6" />
-        </svg>
+        <ChevronLeft size={18} />
       </button>
     {/snippet}
     {#snippet status()}

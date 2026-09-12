@@ -43,6 +43,7 @@
     "@webext-core/messaging": "^4.0.0",
     "bits-ui": "^2.19.2",
     "fflate": "^0.8.3",
+    "lucide-svelte": "^1.0.1",
     "tailwindcss": "^4.3.3"
   }
 }

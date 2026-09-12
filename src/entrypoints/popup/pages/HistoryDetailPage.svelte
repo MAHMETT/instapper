@@ -1,4 +1,5 @@
 <script lang="ts">
+import { ChevronLeft, Download } from 'lucide-svelte';
 import { browser } from 'wxt/browser';
 import { buildCsv, exportFilename, extFromUrl } from '@/features/export/csv';
 import type { ScrapingSession } from '@/shared/types';
@@ -105,20 +106,7 @@ async function downloadZip() {
       aria-label="Back to History"
       onclick={onBack}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="m15 18-6-6 6-6" />
-      </svg>
+      <ChevronLeft size={18} />
     </button>
     <h1 class="text-lg font-bold text-fg">Session Detail</h1>
   </div>
@@ -152,21 +140,7 @@ async function downloadZip() {
         onclick={downloadCsv}
       >
         <span class="inline-flex items-center gap-1.5">
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" x2="12" y1="15" y2="3" />
-          </svg>
+          <Download size={14} />
           CSV
         </span>
       </button>
@@ -177,21 +151,7 @@ async function downloadZip() {
         onclick={downloadZip}
       >
         <span class="inline-flex items-center gap-1.5">
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" x2="12" y1="15" y2="3" />
-          </svg>
+          <Download size={14} class={downloading ? 'animate-bounce' : ''} />
           {downloading ? 'Downloading...' : 'ZIP'}
         </span>
       </button>
