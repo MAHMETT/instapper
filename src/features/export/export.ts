@@ -1,19 +1,9 @@
-import { zipSync } from 'fflate';
-
-const EXT_RE = /\.(jpe?g|png|webp|gif|avif|heic)$/i;
-
-function extFromUrl(url: string): string {
-  const path = url.split(/[?#]/)[0] ?? url;
-  const m = path.match(EXT_RE);
-  if (!m?.[1]) return 'jpg';
-  return m[1].toLowerCase().replace('jpeg', 'jpg');
-}
-
-function pad(n: number, width: number): string {
-  return String(n).padStart(width, '0');
-}
+import { exportFilename } from '@/features/export/csv';
+import { buildImageZip, zipBlobUrl } from '@/features/export/zip';
+import type { ZipImageFormat } from '@/shared/types';
 
 export interface ExportImagesOptions {
+  format: ZipImageFormat;
   onProgress?: (p: { phase: 'fetching' | 'zipping'; done: number; total: number }) => void;
   signal?: AbortSignal;
   filename?: string;
@@ -29,61 +19,31 @@ export interface ExportImagesResult {
 /** Fetch images, bundle into ZIP, and trigger download — runs directly in popup. */
 export async function exportImagesZip(
   urls: string[],
-  options: ExportImagesOptions = {},
+  options: ExportImagesOptions,
 ): Promise<ExportImagesResult> {
-  const { onProgress, signal, filename } = options;
+  const { format, onProgress, signal, filename } = options;
 
   if (urls.length === 0) {
     return { ok: false, total: 0, failed: 0, error: 'No images to export' };
   }
 
   const total = urls.length;
-  const width = String(total).length;
-  const files: Record<string, Uint8Array> = {};
   let failed = 0;
-  let done = 0;
-
-  if (signal?.aborted) {
-    throw new DOMException('Export aborted', 'AbortError');
-  }
 
   try {
-    const queue = [...urls.entries()];
-    const workers = Array.from({ length: 4 }, async () => {
-      while (queue.length > 0) {
-        const item = queue.shift();
-        if (!item) break;
-        const [i, url] = item;
-        const name = `image-${pad(i + 1, width)}.${extFromUrl(url)}`;
-        try {
-          const res = await fetch(url, { signal, credentials: 'omit' });
-          if (!res.ok) {
-            failed++;
-          } else {
-            files[name] = new Uint8Array(await res.arrayBuffer());
-          }
-        } catch {
-          if (signal?.aborted) throw new DOMException('Export aborted', 'AbortError');
-          failed++;
-        }
-        done++;
-        onProgress?.({ phase: 'fetching', done, total });
-      }
-    });
-
-    await Promise.all(workers);
-
-    if (Object.keys(files).length === 0) {
-      return { ok: false, total, failed, error: 'All image downloads failed' };
+    if (signal?.aborted) {
+      throw new DOMException('Export aborted', 'AbortError');
     }
 
-    onProgress?.({ phase: 'zipping', done: total, total });
+    const result = await buildImageZip(urls, {
+      format,
+      signal,
+      onProgress: (p) => onProgress?.({ phase: p.phase, done: p.done, total: p.total }),
+    });
+    failed = result.failed;
 
-    const zipped = zipSync(files, { level: 0 });
-    const blob = new Blob([zipped as BlobPart], { type: 'application/zip' });
-    const blobUrl = URL.createObjectURL(blob);
-    const zipName =
-      filename ?? `instapper_thumbnails_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+    const blobUrl = zipBlobUrl(result.zip);
+    const zipName = filename ?? exportFilename('zip');
 
     const a = document.createElement('a');
     a.href = blobUrl;

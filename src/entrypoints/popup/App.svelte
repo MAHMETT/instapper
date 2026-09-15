@@ -11,10 +11,11 @@ import ExtractPage from './pages/ExtractPage.svelte';
 import HistoryDetailPage from './pages/HistoryDetailPage.svelte';
 import HistoryPage from './pages/HistoryPage.svelte';
 import HomePage from './pages/HomePage.svelte';
+import SettingsPage from './pages/SettingsPage.svelte';
 
 // ── State ────────────────────────────────────────────────
 const detached = $state(isPopoutMode());
-let activeTab = $state<'home' | 'history' | 'about'>('home');
+let activeTab = $state<'home' | 'history' | 'about' | 'settings'>('home');
 let subPage = $state<string | null>(null);
 let connected = $state(false);
 let tabId = $state<number | undefined>(undefined);
@@ -107,7 +108,7 @@ $effect(() => {
 
 // ── Navigation ───────────────────────────────────────────
 function handleTabChange(tab: string) {
-  activeTab = tab as 'home' | 'history' | 'about';
+  activeTab = tab as 'home' | 'history' | 'about' | 'settings';
   subPage = null;
   uiState.setValue({ activeTab, subPage: null });
 }
@@ -149,8 +150,10 @@ async function handlePopout() {
           onNavigateToExtract={() => handleNavigate('extract')}
           onViewDetail={handleViewDetail}
         />
-      {:else}
+      {:else if activeTab === 'about'}
         <AboutPage />
+      {:else}
+        <SettingsPage />
       {/if}
     </div>
 

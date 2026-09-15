@@ -42,9 +42,17 @@ export interface ScrapingSession {
   images: string[];
 }
 
+/** Image format every thumbnail is converted to inside an exported ZIP. */
+export type ZipImageFormat = 'png' | 'jpeg';
+
+/** User-configurable preferences. */
+export interface Settings {
+  zipImageFormat: ZipImageFormat;
+}
+
 /** Persisted UI navigation state. */
 export interface UIState {
-  activeTab: 'home' | 'history' | 'about';
+  activeTab: 'home' | 'history' | 'about' | 'settings';
   subPage: string | null;
 }
 

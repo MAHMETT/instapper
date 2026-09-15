@@ -4,6 +4,7 @@ import type {
   ExportJobState,
   ScrapedImages,
   ScrapingSession,
+  Settings,
   UIState,
 } from './types';
 
@@ -26,4 +27,10 @@ export const uiState = storage.defineItem<UIState>('local:uiState', {
 
 export const currentSession = storage.defineItem<CurrentSession | null>('local:currentSession', {
   fallback: null,
+});
+
+/** User preferences. JPEG by default: Instagram thumbnails already ship as JPEG,
+ * so the default export stays byte-for-byte identical to the raw download. */
+export const settings = storage.defineItem<Settings>('local:settings', {
+  fallback: { zipImageFormat: 'jpeg' },
 });

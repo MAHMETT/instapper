@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCsv, exportFilename, extFromUrl } from '@/features/export/csv';
+import { buildCsv, exportFilename } from '@/features/export/csv';
 
 describe('buildCsv', () => {
   it('returns BOM-prefixed CSV with header row', () => {
@@ -38,44 +38,6 @@ describe('buildCsv', () => {
     expect(lines[1]).toBe('"https://example.com/1.jpg"');
     expect(lines[2]).toBe('"https://example.com/2.png"');
     expect(lines[3]).toBe('"https://example.com/3.webp"');
-  });
-});
-
-describe('extFromUrl', () => {
-  it('extracts jpg from .jpg URL', () => {
-    expect(extFromUrl('https://example.com/photo.jpg')).toBe('jpg');
-  });
-
-  it('extracts png from .png URL', () => {
-    expect(extFromUrl('https://example.com/photo.png')).toBe('png');
-  });
-
-  it('extracts webp from .webp URL', () => {
-    expect(extFromUrl('https://example.com/photo.webp')).toBe('webp');
-  });
-
-  it('normalizes jpeg to jpg', () => {
-    expect(extFromUrl('https://example.com/photo.jpeg')).toBe('jpg');
-  });
-
-  it("returns 'jpg' for URL with no extension", () => {
-    expect(extFromUrl('https://example.com/photo')).toBe('jpg');
-  });
-
-  it('strips query params before matching', () => {
-    expect(extFromUrl('https://example.com/photo.jpg?w=200&h=200')).toBe('jpg');
-  });
-
-  it('handles .gif', () => {
-    expect(extFromUrl('https://example.com/anim.gif')).toBe('gif');
-  });
-
-  it('handles .avif', () => {
-    expect(extFromUrl('https://example.com/modern.avif')).toBe('avif');
-  });
-
-  it('handles .heic', () => {
-    expect(extFromUrl('https://example.com/photo.heic')).toBe('heic');
   });
 });
 

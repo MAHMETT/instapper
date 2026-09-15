@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Clock, Home, Info } from 'lucide-svelte';
+import { Clock, Home, Info, Settings } from 'lucide-svelte';
 
 let {
   activeTab,
@@ -13,6 +13,7 @@ const tabs = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'history', label: 'History', icon: Clock },
   { id: 'about', label: 'About', icon: Info },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 </script>
 

@@ -6,7 +6,13 @@ import { exportImagesZip } from '@/features/export/export';
 import { isPopoutMode } from '@/features/popout/popout';
 import type { Theme } from '@/features/theme/theme';
 import { sendMessage } from '@/shared/messaging';
-import { currentSession, exportJob, scrapedImages, scrapingHistory } from '@/shared/storage';
+import {
+  currentSession,
+  exportJob,
+  scrapedImages,
+  scrapingHistory,
+  settings,
+} from '@/shared/storage';
 import type { ExportProgress as ExportProgressType, ScrapingSession } from '@/shared/types';
 import ActionBar from '../components/ActionBar.svelte';
 import BrandHeader from '../components/BrandHeader.svelte';
@@ -285,6 +291,7 @@ async function handleExport() {
   const images = await scrapedImages.getValue();
   if (images.length === 0) return;
 
+  const { zipImageFormat } = await settings.getValue();
   const controller = new AbortController();
   abortController = controller;
   exporting = true;
@@ -293,6 +300,7 @@ async function handleExport() {
 
   try {
     const result = await exportImagesZip(images, {
+      format: zipImageFormat,
       signal: controller.signal,
       onProgress: (p) => {
         exportProgress = p;

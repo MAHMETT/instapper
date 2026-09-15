@@ -1,7 +1,9 @@
 <script lang="ts">
 import { ChevronLeft, Download } from 'lucide-svelte';
 import { browser } from 'wxt/browser';
-import { buildCsv, exportFilename, extFromUrl } from '@/features/export/csv';
+import { buildCsv, exportFilename } from '@/features/export/csv';
+import { buildImageZip, zipBlobUrl } from '@/features/export/zip';
+import { settings } from '@/shared/storage';
 import type { ScrapingSession } from '@/shared/types';
 
 let {
@@ -47,50 +49,17 @@ async function downloadZip() {
   if (!hasImages || downloading) return;
   downloading = true;
   try {
-    const { zipSync } = await import('fflate');
-    const files: Record<string, Uint8Array> = {};
-    const width = String(images.length).length;
-    let failed = 0;
-
-    const queue = [...images.entries()];
-    const workers: Promise<void>[] = [];
-    const CONCURRENCY = 4;
-
-    const worker = async () => {
-      while (queue.length > 0) {
-        const item = queue.shift();
-        if (!item) break;
-        const [i, url] = item;
-        const name = `image-${String(i + 1).padStart(width, '0')}.${extFromUrl(url)}`;
-        try {
-          const res = await fetch(url, { credentials: 'omit' });
-          if (!res.ok) {
-            failed++;
-          } else {
-            files[name] = new Uint8Array(await res.arrayBuffer());
-          }
-        } catch {
-          failed++;
-        }
-      }
-    };
-
-    for (let i = 0; i < CONCURRENCY; i++) {
-      workers.push(worker());
-    }
-    await Promise.all(workers);
-
-    if (Object.keys(files).length === 0) return;
-
-    const zipped = zipSync(files, { level: 0 });
-    const blob = new Blob([zipped as BlobPart], { type: 'application/zip' });
-    const blobUrl = URL.createObjectURL(blob);
+    const { zipImageFormat } = await settings.getValue();
+    const { zip } = await buildImageZip(images, { format: zipImageFormat });
+    const blobUrl = zipBlobUrl(zip);
     const filename = exportFilename('zip');
     try {
       await browser.downloads.download({ url: blobUrl, filename });
     } finally {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     }
+  } catch {
+    /* nothing was collected — nothing to download */
   } finally {
     downloading = false;
   }

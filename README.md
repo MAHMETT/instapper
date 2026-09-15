@@ -35,6 +35,7 @@ No account, no server, no telemetry. Everything runs locally in your browser.
 - **Always in sync** — the counter updates live while scraping, and your data survives a popup close.
 - **Export CSV** — a clean list of image links, handy for scripts or spreadsheets.
 - **Export ZIP** — downloads the images themselves, bundled into a single archive.
+- **One format in the archive** — every thumbnail is converted to PNG or JPEG on export (images already in that format are kept as-is). Pick the target in **Settings**.
 - **Light & dark** — a proper theme toggle, dark by default.
 - **Chrome & Firefox** — one codebase, both browsers, via WXT.
 
