@@ -39,16 +39,17 @@ No account, no server, no telemetry. Everything runs locally in your browser.
 - **Date range filter** — narrow thumbnails by post date: last 1/3/6/8/12 months, all dates, or a custom from/to range (defaults to the last 8 months, and is remembered between sessions). The counter shows in-range over total, and scraping stops on its own once it scrolls past the range. Thumbnails whose post date can't be determined are always kept.
 - **Optional sort on export** — choose per export whether the ZIP stays flat or groups files into `YYYY-MM/` folders, oldest first.
 - **Light & dark** — a proper theme toggle, dark by default.
-- **Chrome & Firefox** — one codebase, both browsers, via WXT.
+- **Chrome, Firefox & Safari** — one codebase, three browsers, via WXT.
 
 ## Download
 
 Grab a ready-to-use build from the [**Releases page**](https://github.com/MAHMETT/instapper/releases):
 
-- Chrome / Edge — `instapper-chrome-v1.1.2.zip`
-- Firefox — `instapper-firefox-v1.1.2.zip`
+- Chrome / Edge — `instapper-1.2.0-chrome.zip`
+- Firefox — `instapper-1.2.0-firefox.zip`
+- Safari — `instapper-1.2.0-safari.zip`
 
-> Replace `v1.1.2` with the latest version shown on the Releases page.
+> Replace `1.2.0` with the latest version shown on the Releases page.
 
 These aren't on the official stores yet, so "installing" just means unzipping and loading the folder. It takes about a minute.
 
