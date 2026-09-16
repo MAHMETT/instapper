@@ -77,6 +77,15 @@ export interface ScrapeState {
   stoppedByRange: boolean;
 }
 
+/** Stage the ZIP export modal is currently showing. */
+export type ExportPhase = 'choose' | 'progress' | 'done' | 'error';
+
+/** Outcome of a finished ZIP export, for the completion modal. */
+export interface ExportOutcome {
+  exported: number;
+  failed: number;
+}
+
 /** Persisted UI navigation state. */
 export interface UIState {
   activeTab: 'home' | 'history' | 'about' | 'settings';

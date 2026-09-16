@@ -25,6 +25,8 @@ import {
 } from '@/shared/storage';
 import type {
   DateRangeSettings,
+  ExportOutcome,
+  ExportPhase,
   ExportProgress as ExportProgressType,
   ScrapedImage,
   ScrapingSession,
@@ -69,6 +71,9 @@ let dateRange = $state<DateRangeSettings>({ ...DEFAULT_DATE_RANGE_SETTINGS });
 // Export state
 let exporting = $state(false);
 let exportProgress = $state<ExportProgressType | null>(null);
+let exportPhase = $state<ExportPhase>('choose');
+let exportOutcome = $state<ExportOutcome | null>(null);
+let exportError = $state('');
 let abortController = $state<AbortController | null>(null);
 
 // ── Derived ──────────────────────────────────────────────
@@ -187,12 +192,12 @@ $effect(() => {
   prevCount = visibleCount;
 });
 
-// Escape key closes modal / cancels export
+// Escape key cancels a running export, or closes the clear dialog
 $effect(() => {
   function onKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       if (exporting) {
-        sendMessage('cancelExport');
+        abortController?.abort();
       } else if (showClearModal) {
         showClearModal = false;
       }
@@ -361,6 +366,9 @@ async function confirmClear() {
 
 function handleExport() {
   if (exporting || !canExport) return;
+  exportPhase = 'choose';
+  exportOutcome = null;
+  exportError = '';
   showExportModal = true;
 }
 
@@ -373,6 +381,9 @@ async function runZipExport(grouping: ZipGrouping) {
   abortController = controller;
   exporting = true;
   exportProgress = null;
+  exportOutcome = null;
+  exportError = '';
+  exportPhase = 'progress';
   message = '';
 
   try {
@@ -385,20 +396,22 @@ async function runZipExport(grouping: ZipGrouping) {
       },
     });
 
-    if (result.failed > 0) {
-      message = `Exported ${result.total - result.failed} images, ${result.failed} failed.`;
-      messageType = 'error';
+    if (result.ok) {
+      exportPhase = 'done';
+      exportOutcome = { exported: result.total - result.failed, failed: result.failed };
     } else {
-      message = `Exported ${result.total} images.`;
-      messageType = 'info';
+      exportPhase = 'error';
+      exportError = result.error ?? 'Export failed.';
     }
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
+      showExportModal = false;
+      exportPhase = 'choose';
       message = 'Export canceled.';
       messageType = 'info';
     } else {
-      message = err instanceof Error ? err.message : 'Export failed.';
-      messageType = 'error';
+      exportPhase = 'error';
+      exportError = err instanceof Error ? err.message : 'Export failed.';
     }
   } finally {
     exporting = false;
@@ -487,13 +500,10 @@ async function runZipExport(grouping: ZipGrouping) {
         hasImages={count > 0}
         {canExport}
         {exporting}
-        {exportProgress}
-        {exportPercent}
         onStart={handleStart}
         onStop={handleStop}
         onDownload={handleDownload}
         onExport={handleExport}
-        onExportCancel={() => abortController?.abort()}
         onClear={() => (showClearModal = true)}
       />
 
@@ -510,6 +520,22 @@ async function runZipExport(grouping: ZipGrouping) {
     </div>
   </main>
 
-  <ConfirmClearDialog bind:open={showClearModal} onConfirm={confirmClear} />
-  <ExportZipDialog bind:open={showExportModal} count={visibleCount} onConfirm={runZipExport} />
+  <ConfirmClearDialog
+    bind:open={showClearModal}
+    title="Start a new collection?"
+    description="The current session is saved to History first, then the thumbnails are cleared so you can scrape fresh."
+    confirmLabel="Save and clear"
+    onConfirm={confirmClear}
+  />
+  <ExportZipDialog
+    bind:open={showExportModal}
+    count={visibleCount}
+    phase={exportPhase}
+    progress={exportProgress}
+    percent={exportPercent}
+    result={exportOutcome}
+    error={exportError}
+    onConfirm={runZipExport}
+    onCancel={() => abortController?.abort()}
+  />
 </div>

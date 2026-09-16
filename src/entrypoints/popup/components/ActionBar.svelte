@@ -1,21 +1,16 @@
 <script lang="ts">
 import { Separator, Tooltip } from 'bits-ui';
 import { Download, Pause, Play } from 'lucide-svelte';
-import type { ExportProgress as ExportProgressType } from '@/shared/types';
-import ExportProgress from './ExportProgress.svelte';
 
 let {
   scrolling,
   hasImages,
   canExport,
   exporting,
-  exportProgress,
-  exportPercent,
   onStart,
   onStop,
   onDownload,
   onExport,
-  onExportCancel,
   onClear,
 }: {
   scrolling: boolean;
@@ -24,13 +19,10 @@ let {
   /** Whether the active date filter leaves anything to export. */
   canExport: boolean;
   exporting: boolean;
-  exportProgress: ExportProgressType | null;
-  exportPercent: number;
   onStart: () => void;
   onStop: () => void;
   onDownload: () => void;
   onExport: () => void;
-  onExportCancel: () => void;
   onClear: () => void;
 } = $props();
 
@@ -192,10 +184,6 @@ const stopped = $derived(!scrolling && hasImages);
       </span>
     </button>
   </div>
-
-  {#if exporting}
-    <ExportProgress progress={exportProgress} percent={exportPercent} onCancel={onExportCancel} />
-  {/if}
 
   <Separator.Root class="my-1 h-px w-full bg-border" />
 </div>

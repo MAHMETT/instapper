@@ -166,5 +166,11 @@ async function clearAllHistory() {
     </div>
   {/if}
 
-  <ConfirmClearDialog bind:open={showClearDialog} onConfirm={clearAllHistory} />
+  <ConfirmClearDialog
+    bind:open={showClearDialog}
+    title="Delete all history?"
+    description="This permanently removes every saved session. Any ZIP or CSV you already exported is not affected."
+    confirmLabel="Delete all"
+    onConfirm={clearAllHistory}
+  />
 </div>
