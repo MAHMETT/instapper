@@ -65,10 +65,14 @@ export interface DateRangeSettings {
   to: string | null;
 }
 
+/** UI languages the extension ships with. */
+export type Locale = 'en' | 'id';
+
 /** User-configurable preferences. */
 export interface Settings {
   zipImageFormat: ZipImageFormat;
   dateRange: DateRangeSettings;
+  locale: Locale;
 }
 
 /** Why the scroller last stopped itself, surfaced to the popup. */

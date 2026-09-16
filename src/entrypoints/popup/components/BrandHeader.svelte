@@ -1,5 +1,6 @@
 <script lang="ts">
 import { ExternalLink } from 'lucide-svelte';
+import { t } from '@/features/i18n/locale';
 import type { Theme } from '@/features/theme/theme';
 import ThemeToggle from './ThemeToggle.svelte';
 
@@ -50,7 +51,7 @@ let {
       <button
         type="button"
         class="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-secondary transition-colors hover:bg-surface-secondary hover:text-fg focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2 group"
-        aria-label="Pop out to new window"
+        aria-label={$t('header.popout')}
         onclick={onPopout}
       >
         <span class="transition-transform duration-200 group-hover:rotate-45">

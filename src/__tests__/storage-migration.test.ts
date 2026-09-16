@@ -17,18 +17,29 @@ const { defineItemMock, store } = vi.hoisted(() => {
 
 vi.mock('wxt/utils/storage', () => ({ storage: { defineItem: defineItemMock } }));
 
+import { DEFAULT_LOCALE } from '@/features/i18n/locale';
 import { DEFAULT_DATE_RANGE_SETTINGS } from '@/shared/date-range';
 import { scrapedImages, scrapingHistory, settings, updateSettings } from '@/shared/storage';
+import type { Settings } from '@/shared/types';
 
 interface ItemOptions {
   version?: number;
   migrations?: Record<number, (value: unknown) => unknown>;
 }
 
-/** Run the v2 migration for a storage item, the way wxt does on version bump. */
-function migrateToV2(item: unknown, value: unknown): unknown {
+/**
+ * Run every migration step from `fromVersion` up to the item's target version,
+ * the way wxt does on a version bump.
+ */
+function runMigrations(item: unknown, fromVersion: number, value: unknown): unknown {
   const options = item as ItemOptions;
-  return options.migrations?.[2]?.(value);
+  const target = options.version ?? 1;
+
+  let migrated = value;
+  for (let version = fromVersion + 1; version <= target; version++) {
+    migrated = options.migrations?.[version]?.(migrated) ?? migrated;
+  }
+  return migrated;
 }
 
 describe('scrapedImages storage migration', () => {
@@ -39,7 +50,7 @@ describe('scrapedImages storage migration', () => {
   });
 
   it('upgrades v1 url strings into undated images', () => {
-    expect(migrateToV2(scrapedImages, ['https://a.jpg', 'https://b.jpg'])).toEqual([
+    expect(runMigrations(scrapedImages, 1, ['https://a.jpg', 'https://b.jpg'])).toEqual([
       { url: 'https://a.jpg', takenAt: null },
       { url: 'https://b.jpg', takenAt: null },
     ]);
@@ -47,26 +58,26 @@ describe('scrapedImages storage migration', () => {
 
   it('leaves already-migrated values untouched, so it can run twice', () => {
     const value = [{ url: 'https://a.jpg', takenAt: 1234 }];
-    expect(migrateToV2(scrapedImages, value)).toEqual(value);
+    expect(runMigrations(scrapedImages, 1, value)).toEqual(value);
   });
 
   it('drops entries that are not urls', () => {
     const messy = ['https://a.jpg', 42, null, undefined, {}, { url: 'https://b.jpg' }];
-    expect(migrateToV2(scrapedImages, messy)).toEqual([
+    expect(runMigrations(scrapedImages, 1, messy)).toEqual([
       { url: 'https://a.jpg', takenAt: null },
       { url: 'https://b.jpg', takenAt: null },
     ]);
   });
 
   it('coerces a missing takenAt to null', () => {
-    expect(migrateToV2(scrapedImages, [{ url: 'https://a.jpg' }])).toEqual([
+    expect(runMigrations(scrapedImages, 1, [{ url: 'https://a.jpg' }])).toEqual([
       { url: 'https://a.jpg', takenAt: null },
     ]);
   });
 
   it('survives a non-array value', () => {
-    expect(migrateToV2(scrapedImages, null)).toEqual([]);
-    expect(migrateToV2(scrapedImages, 'nonsense')).toEqual([]);
+    expect(runMigrations(scrapedImages, 1, null)).toEqual([]);
+    expect(runMigrations(scrapedImages, 1, 'nonsense')).toEqual([]);
   });
 });
 
@@ -88,7 +99,7 @@ describe('scrapingHistory storage migration', () => {
       },
     ];
 
-    const migrated = migrateToV2(scrapingHistory, sessions) as Record<string, unknown>[];
+    const migrated = runMigrations(scrapingHistory, 1, sessions) as Record<string, unknown>[];
 
     expect(migrated[0]?.id).toBe('session-1');
     expect(migrated[0]?.date).toBe(1700000000000);
@@ -100,42 +111,59 @@ describe('scrapingHistory storage migration', () => {
   });
 
   it('tolerates sessions with no images field', () => {
-    const migrated = migrateToV2(scrapingHistory, [{ id: 'x' }]) as Record<string, unknown>[];
+    const migrated = runMigrations(scrapingHistory, 1, [{ id: 'x' }]) as Record<string, unknown>[];
     expect(migrated[0]?.images).toEqual([]);
     expect(migrated[0]?.id).toBe('x');
   });
 
   it('survives a non-array value', () => {
-    expect(migrateToV2(scrapingHistory, null)).toEqual([]);
+    expect(runMigrations(scrapingHistory, 1, null)).toEqual([]);
   });
 });
 
 describe('settings storage migration', () => {
-  it('is declared as v2 with a migration', () => {
+  it('is declared as v3, with a migration from v1 and from v2', () => {
     const options = settings as unknown as ItemOptions;
-    expect(options.version).toBe(2);
+    expect(options.version).toBe(3);
     expect(typeof options.migrations?.[2]).toBe('function');
+    expect(typeof options.migrations?.[3]).toBe('function');
   });
 
-  it('adds the default date range when upgrading from v1', () => {
-    expect(migrateToV2(settings, { zipImageFormat: 'png' })).toEqual({
+  it('fills in every preference when upgrading from v1', () => {
+    expect(runMigrations(settings, 1, { zipImageFormat: 'png' })).toEqual({
       zipImageFormat: 'png',
       dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+      locale: DEFAULT_LOCALE,
     });
   });
 
-  it('keeps a stored date range, so it can run twice', () => {
-    const value = {
+  // A v2 install already has a date range; it must gain the locale, not lose it.
+  it('adds the locale when upgrading from v2 without touching the date range', () => {
+    expect(
+      runMigrations(settings, 2, {
+        zipImageFormat: 'png',
+        dateRange: { preset: '1m', from: null, to: null },
+      }),
+    ).toEqual({
       zipImageFormat: 'png',
       dateRange: { preset: '1m', from: null, to: null },
-    };
-    expect(migrateToV2(settings, value)).toEqual(value);
+      locale: DEFAULT_LOCALE,
+    });
+  });
+
+  it('defaults the interface language to Indonesian', () => {
+    expect((runMigrations(settings, 1, {}) as Settings).locale).toBe('id');
+  });
+
+  it('keeps a stored language', () => {
+    expect((runMigrations(settings, 2, { locale: 'en' }) as Settings).locale).toBe('en');
   });
 
   it('falls back to defaults when nothing is stored', () => {
-    expect(migrateToV2(settings, undefined)).toEqual({
+    expect(runMigrations(settings, 1, undefined)).toEqual({
       zipImageFormat: 'jpeg',
       dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+      locale: DEFAULT_LOCALE,
     });
   });
 });
@@ -147,6 +175,7 @@ describe('updateSettings', () => {
     await settings.setValue({
       zipImageFormat: 'jpeg',
       dateRange: { preset: '1m', from: null, to: null },
+      locale: 'en',
     });
 
     await updateSettings({ zipImageFormat: 'png' });
@@ -154,6 +183,7 @@ describe('updateSettings', () => {
     expect(await settings.getValue()).toEqual({
       zipImageFormat: 'png',
       dateRange: { preset: '1m', from: null, to: null },
+      locale: 'en',
     });
   });
 
@@ -161,6 +191,7 @@ describe('updateSettings', () => {
     await settings.setValue({
       zipImageFormat: 'png',
       dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+      locale: DEFAULT_LOCALE,
     });
 
     await updateSettings({
@@ -170,6 +201,23 @@ describe('updateSettings', () => {
     expect(await settings.getValue()).toEqual({
       zipImageFormat: 'png',
       dateRange: { preset: 'custom', from: '2026-01-10', to: '2026-01-20' },
+      locale: DEFAULT_LOCALE,
+    });
+  });
+
+  it('changes the language without disturbing the other preferences', async () => {
+    await settings.setValue({
+      zipImageFormat: 'png',
+      dateRange: { preset: '3m', from: null, to: null },
+      locale: DEFAULT_LOCALE,
+    });
+
+    await updateSettings({ locale: 'en' });
+
+    expect(await settings.getValue()).toEqual({
+      zipImageFormat: 'png',
+      dateRange: { preset: '3m', from: null, to: null },
+      locale: 'en',
     });
   });
 
@@ -181,6 +229,7 @@ describe('updateSettings', () => {
     expect(await settings.getValue()).toEqual({
       zipImageFormat: 'png',
       dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+      locale: DEFAULT_LOCALE,
     });
   });
 });

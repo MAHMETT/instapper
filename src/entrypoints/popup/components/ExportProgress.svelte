@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Progress } from 'bits-ui';
+import { t } from '@/features/i18n/locale';
 import type { ExportProgress as ExportProgressType } from '@/shared/types';
 
 let {
@@ -13,9 +14,11 @@ let {
 } = $props();
 
 let label = $derived.by(() => {
-  if (!progress) return 'Starting\u2026';
-  if (progress.phase === 'fetching') return `Fetching ${progress.done}/${progress.total}`;
-  return 'Creating ZIP\u2026';
+  if (!progress) return $t('progress.starting');
+  if (progress.phase === 'fetching') {
+    return $t('progress.fetching', { done: progress.done, total: progress.total });
+  }
+  return $t('progress.creatingZip');
 });
 </script>
 
@@ -37,7 +40,7 @@ let label = $derived.by(() => {
       class="text-xs font-medium text-danger underline underline-offset-2 transition-colors hover:text-danger/80"
       onclick={onCancel}
     >
-      Cancel
+      {$t('common.cancel')}
     </button>
   </div>
 </div>

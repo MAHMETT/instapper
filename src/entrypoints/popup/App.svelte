@@ -1,9 +1,10 @@
 <script lang="ts">
 import { browser } from 'wxt/browser';
+import { DEFAULT_LOCALE, isLocale, setLocale } from '@/features/i18n/locale';
 import { getSenderTabId, isPopoutMode, openPopoutWindow } from '@/features/popout/popout';
 import { toggleTheme as doToggleTheme, getStoredTheme, type Theme } from '@/features/theme/theme';
-import { currentSession, uiState } from '@/shared/storage';
-import type { ScrapingSession } from '@/shared/types';
+import { currentSession, settings, uiState } from '@/shared/storage';
+import type { Locale, ScrapingSession } from '@/shared/types';
 import BottomTabBar from './components/BottomTabBar.svelte';
 import BrandHeader from './components/BrandHeader.svelte';
 import AboutPage from './pages/AboutPage.svelte';
@@ -104,6 +105,17 @@ $effect(() => {
     subPage = state.subPage;
   });
   resolveTab();
+});
+
+// Keep the interface language in sync with the stored preference, so changing
+// it takes effect immediately and the detached window follows along.
+$effect(() => {
+  function apply(state: { locale: Locale }): void {
+    setLocale(isLocale(state.locale) ? state.locale : DEFAULT_LOCALE);
+  }
+
+  settings.getValue().then(apply);
+  return settings.watch(apply);
 });
 
 // ── Navigation ───────────────────────────────────────────

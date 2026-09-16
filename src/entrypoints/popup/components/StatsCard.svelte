@@ -1,4 +1,6 @@
 <script lang="ts">
+import { t } from '@/features/i18n/locale';
+
 let {
   count,
   total,
@@ -14,7 +16,7 @@ let {
 
 <div
   class="flex flex-col items-center gap-1 rounded-xl border border-border bg-surface px-5 py-5"
-  title="{count} of {total} thumbnails fall inside the selected date range"
+  title={$t('stats.title', { count, total })}
 >
   <span class="flex items-baseline leading-none">
     <span
@@ -26,5 +28,7 @@ let {
     </span>
     <span class="text-2xl font-bold text-fg-muted">/{total}</span>
   </span>
-  <span class="text-xs font-medium uppercase tracking-widest text-fg-muted">In range / total</span>
+  <span class="text-xs font-medium uppercase tracking-widest text-fg-muted"
+    >{$t('stats.label')}</span
+  >
 </div>

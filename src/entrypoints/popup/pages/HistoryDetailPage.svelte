@@ -3,6 +3,7 @@ import { ChevronLeft, Download } from 'lucide-svelte';
 import { browser } from 'wxt/browser';
 import { buildCsv, exportFilename } from '@/features/export/csv';
 import { buildImageZip, zipBlobUrl } from '@/features/export/zip';
+import { currentLocale, formatDateTime, t } from '@/features/i18n/locale';
 import { settings } from '@/shared/storage';
 import type { ScrapedImage, ScrapingSession } from '@/shared/types';
 
@@ -18,19 +19,6 @@ let {
 
 const hasImages = $derived(images.length > 0);
 let downloading = $state(false);
-
-function formatDate(ts: number): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-    .format(new Date(ts))
-    .replace(',', ',');
-}
 
 async function downloadCsv() {
   if (!hasImages) return;
@@ -72,29 +60,29 @@ async function downloadZip() {
     <button
       type="button"
       class="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-secondary transition-colors hover:bg-surface-secondary hover:text-fg focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
-      aria-label="Back to History"
+      aria-label={$t('header.backHistory')}
       onclick={onBack}
     >
       <ChevronLeft size={18} />
     </button>
-    <h1 class="text-lg font-bold text-fg">Session Detail</h1>
+    <h1 class="text-lg font-bold text-fg">{$t('detail.title')}</h1>
   </div>
 
   <!-- Session info card -->
   <div class="rounded-xl border border-border bg-surface p-5">
     <dl class="flex flex-col gap-3 text-sm">
       <div class="flex items-center justify-between">
-        <dt class="text-fg-muted">Date</dt>
-        <dd class="text-fg-secondary">{formatDate(session.date)}</dd>
+        <dt class="text-fg-muted">{$t('detail.date')}</dt>
+        <dd class="text-fg-secondary">{formatDateTime(session.date, $currentLocale)}</dd>
       </div>
       <div class="h-px bg-border"></div>
       <div class="flex flex-col gap-1">
-        <dt class="text-fg-muted">Source</dt>
+        <dt class="text-fg-muted">{$t('detail.source')}</dt>
         <dd class="break-all font-mono text-xs text-fg-secondary">{session.sourceUrl}</dd>
       </div>
       <div class="h-px bg-border"></div>
       <div class="flex items-center justify-between">
-        <dt class="text-fg-muted">Thumbnails</dt>
+        <dt class="text-fg-muted">{$t('detail.thumbnails')}</dt>
         <dd class="font-mono text-lg font-bold text-fg">{session.thumbnailCount}</dd>
       </div>
     </dl>
@@ -110,7 +98,7 @@ async function downloadZip() {
       >
         <span class="inline-flex items-center gap-1.5">
           <Download size={14} />
-          CSV
+          {$t('common.csv')}
         </span>
       </button>
       <button
@@ -121,13 +109,13 @@ async function downloadZip() {
       >
         <span class="inline-flex items-center gap-1.5">
           <Download size={14} class={downloading ? 'animate-bounce' : ''} />
-          {downloading ? 'Downloading...' : 'ZIP'}
+          {downloading ? $t('detail.downloading') : $t('common.zip')}
         </span>
       </button>
     </div>
   {:else}
     <p class="text-center text-xs text-fg-muted">
-      Images were not stored in this session. Re-scrape to download.
+      {$t('detail.noImages')}
     </p>
   {/if}
 </div>

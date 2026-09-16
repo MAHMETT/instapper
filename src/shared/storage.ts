@@ -1,4 +1,5 @@
 import { storage } from 'wxt/utils/storage';
+import { DEFAULT_LOCALE } from '@/features/i18n/locale';
 import { DEFAULT_DATE_RANGE_SETTINGS } from './date-range';
 import type {
   CurrentSession,
@@ -71,14 +72,21 @@ export const currentSession = storage.defineItem<CurrentSession | null>('local:c
 const DEFAULT_SETTINGS: Settings = {
   zipImageFormat: 'jpeg',
   dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+  locale: DEFAULT_LOCALE,
 };
 
-/** User preferences. v1 only stored `zipImageFormat`. */
+/** Fill in any preference added since the stored value was written. */
+function withSettingsDefaults(value: unknown): Settings {
+  return { ...DEFAULT_SETTINGS, ...(value as Partial<Settings> | null) };
+}
+
+/** User preferences. v1 stored only `zipImageFormat`, v2 added `dateRange`. */
 export const settings = storage.defineItem<Settings>('local:settings', {
   fallback: DEFAULT_SETTINGS,
-  version: 2,
+  version: 3,
   migrations: {
-    2: (oldValue: unknown) => ({ ...DEFAULT_SETTINGS, ...(oldValue as Partial<Settings>) }),
+    2: (oldValue: unknown) => withSettingsDefaults(oldValue),
+    3: (oldValue: unknown) => withSettingsDefaults(oldValue),
   },
 });
 

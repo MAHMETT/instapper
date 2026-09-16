@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Dialog } from 'bits-ui';
+import { type MessageKey, t } from '@/features/i18n/locale';
 import type {
   ExportOutcome,
   ExportPhase,
@@ -36,9 +37,9 @@ let {
 let grouping = $state<ZipGrouping>('flat');
 let closeTimer: ReturnType<typeof setTimeout> | undefined;
 
-const options: { value: ZipGrouping; label: string; hint: string }[] = [
-  { value: 'flat', label: 'No sorting', hint: 'Every file at the top level' },
-  { value: 'by-date', label: 'Group by date', hint: 'Folders like 2025-03/, oldest first' },
+const options: { value: ZipGrouping; labelKey: MessageKey; hintKey: MessageKey }[] = [
+  { value: 'flat', labelKey: 'export.flat', hintKey: 'export.flatHint' },
+  { value: 'by-date', labelKey: 'export.byDate', hintKey: 'export.byDateHint' },
 ];
 
 // Close the completion modal on its own; interacting with it cancels the timer.
@@ -65,15 +66,13 @@ $effect(() => {
       class="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-6 shadow-xl data-[state=open]:animate-[dialog-content-in_0.18s_cubic-bezier(0.34,1.56,0.64,1)]"
     >
       {#if phase === 'choose'}
-        <Dialog.Title class="text-base font-semibold text-fg">Export ZIP</Dialog.Title>
+        <Dialog.Title class="text-base font-semibold text-fg">{$t('export.title')}</Dialog.Title>
         <Dialog.Description class="mt-1.5 text-sm text-fg-secondary">
-          {count}
-          thumbnail{count === 1 ? '' : 's'}
-          will be downloaded.
+          {$t('export.count', { count })}
         </Dialog.Description>
 
         <fieldset class="mt-4 flex flex-col gap-2">
-          <legend class="sr-only">ZIP layout</legend>
+          <legend class="sr-only">{$t('export.layoutLegend')}</legend>
           {#each options as option}
             <label
               class="flex cursor-pointer items-start rounded-lg border border-border bg-surface-secondary p-3 transition-colors hover:bg-border/50 has-checked:border-brand-indigo/40 has-checked:bg-brand-indigo/10 has-focus-visible:outline-2 has-focus-visible:outline-brand-cyan has-focus-visible:outline-offset-2"
@@ -87,8 +86,8 @@ $effect(() => {
                 onchange={() => (grouping = option.value)}
               >
               <span class="flex flex-col gap-0.5">
-                <span class="text-sm font-medium text-fg">{option.label}</span>
-                <span class="text-xs text-fg-muted">{option.hint}</span>
+                <span class="text-sm font-medium text-fg">{$t(option.labelKey)}</span>
+                <span class="text-xs text-fg-muted">{$t(option.hintKey)}</span>
               </span>
             </label>
           {/each}
@@ -98,61 +97,57 @@ $effect(() => {
           <Dialog.Close
             class="flex-1 rounded-lg border border-border bg-surface-secondary px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-border/50 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
           >
-            Cancel
+            {$t('common.cancel')}
           </Dialog.Close>
           <button
             type="button"
             class="flex-1 rounded-lg bg-linear-to-r from-brand-indigo to-brand-blue px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
             onclick={() => onConfirm(grouping)}
           >
-            Export
+            {$t('export.confirm')}
           </button>
         </div>
       {:else if phase === 'progress'}
-        <Dialog.Title class="text-base font-semibold text-fg">Exporting ZIP</Dialog.Title>
+        <Dialog.Title class="text-base font-semibold text-fg">
+          {$t('export.progressTitle')}
+        </Dialog.Title>
         <Dialog.Description class="mt-1.5 text-sm text-fg-secondary">
-          Downloading
-          {count}
-          thumbnail{count === 1 ? '' : 's'}
-          and
-          {grouping === 'by-date' ? 'filing them by month' : 'keeping one flat folder'}.
+          {$t('export.progressBody', { count, layout: grouping })}
         </Dialog.Description>
 
         <div class="mt-4">
           <ExportProgress {progress} {percent} {onCancel} />
         </div>
       {:else if phase === 'done'}
-        <Dialog.Title class="text-base font-semibold text-fg">Download complete</Dialog.Title>
+        <Dialog.Title class="text-base font-semibold text-fg">
+          {$t('export.doneTitle')}
+        </Dialog.Title>
         <Dialog.Description class="mt-1.5 text-sm text-fg-secondary">
-          {result?.exported ?? 0}
-          thumbnail{(result?.exported ?? 0) === 1 ? '' : 's'}
-          downloaded
-          {#if result && result.failed > 0}
-            , {result.failed} could not be fetched
-          {/if}
-          .
+          {$t('export.doneBody', { exported: result?.exported ?? 0, failed: result?.failed ?? 0 })}
         </Dialog.Description>
 
-        <p class="mt-3 text-xs text-fg-muted">This closes on its own in a few seconds.</p>
+        <p class="mt-3 text-xs text-fg-muted">{$t('export.doneHint')}</p>
 
         <div class="mt-5">
           <Dialog.Close
             class="w-full rounded-lg bg-linear-to-r from-brand-indigo to-brand-blue px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
           >
-            OK
+            {$t('common.ok')}
           </Dialog.Close>
         </div>
       {:else}
-        <Dialog.Title class="text-base font-semibold text-fg">Export failed</Dialog.Title>
+        <Dialog.Title class="text-base font-semibold text-fg">
+          {$t('export.errorTitle')}
+        </Dialog.Title>
         <Dialog.Description class="mt-1.5 text-sm text-fg-secondary">
-          {error || 'Something went wrong while building the ZIP.'}
+          {error || $t('export.errorFallback')}
         </Dialog.Description>
 
         <div class="mt-5">
           <Dialog.Close
             class="w-full rounded-lg border border-border bg-surface-secondary px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-border/50 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
           >
-            OK
+            {$t('common.ok')}
           </Dialog.Close>
         </div>
       {/if}

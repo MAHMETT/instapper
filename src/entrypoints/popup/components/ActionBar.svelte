@@ -1,6 +1,7 @@
 <script lang="ts">
 import { Separator, Tooltip } from 'bits-ui';
 import { Download, Pause, Play } from 'lucide-svelte';
+import { t } from '@/features/i18n/locale';
 
 let {
   scrolling,
@@ -45,7 +46,7 @@ const stopped = $derived(!scrolling && hasImages);
               <span class="transition-transform hover:scale-110 hover:rotate-[8deg]">
                 <Pause size={16} strokeWidth={2.5} />
               </span>
-              Pause
+              {$t('action.pause')}
             </button>
           {/snippet}
         </Tooltip.Trigger>
@@ -54,7 +55,7 @@ const stopped = $derived(!scrolling && hasImages);
           sideOffset={4}
           class="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-fg-secondary shadow-md"
         >
-          Pause scraping
+          {$t('action.pauseHint')}
           <Tooltip.Arrow class="fill-surface" />
         </Tooltip.Content>
       </Tooltip.Root>
@@ -75,7 +76,7 @@ const stopped = $derived(!scrolling && hasImages);
                 <span class="transition-transform hover:scale-110">
                   <Play size={16} fill="currentColor" />
                 </span>
-                Continue
+                {$t('action.continue')}
               </button>
             {/snippet}
           </Tooltip.Trigger>
@@ -84,7 +85,7 @@ const stopped = $derived(!scrolling && hasImages);
             sideOffset={4}
             class="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-fg-secondary shadow-md"
           >
-            Continue scraping
+            {$t('action.continueHint')}
             <Tooltip.Arrow class="fill-surface" />
           </Tooltip.Content>
         </Tooltip.Root>
@@ -95,7 +96,7 @@ const stopped = $derived(!scrolling && hasImages);
         class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm font-semibold text-danger transition-all hover:bg-danger/20 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
         onclick={onClear}
       >
-        Reset
+        {$t('action.reset')}
       </button>
     </div>
   {:else}
@@ -113,7 +114,7 @@ const stopped = $derived(!scrolling && hasImages);
               <span class="transition-transform hover:scale-110">
                 <Play size={16} fill="currentColor" />
               </span>
-              Start
+              {$t('action.start')}
             </button>
           {/snippet}
         </Tooltip.Trigger>
@@ -122,7 +123,7 @@ const stopped = $derived(!scrolling && hasImages);
           sideOffset={4}
           class="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-fg-secondary shadow-md"
         >
-          Start scraping
+          {$t('action.startHint')}
           <Tooltip.Arrow class="fill-surface" />
         </Tooltip.Content>
       </Tooltip.Root>
@@ -150,7 +151,7 @@ const stopped = $derived(!scrolling && hasImages);
                 >
                   <Download size={14} />
                 </span>
-                CSV
+                {$t('common.csv')}
               </span>
             </button>
           {/snippet}
@@ -160,7 +161,7 @@ const stopped = $derived(!scrolling && hasImages);
           sideOffset={4}
           class="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-fg-secondary shadow-md"
         >
-          Download CSV — some expired links may fail
+          {$t('action.csvHint')}
           <Tooltip.Arrow class="fill-surface" />
         </Tooltip.Content>
       </Tooltip.Root>
@@ -180,7 +181,7 @@ const stopped = $derived(!scrolling && hasImages);
         >
           <Download size={14} />
         </span>
-        ZIP
+        {$t('common.zip')}
       </span>
     </button>
   </div>

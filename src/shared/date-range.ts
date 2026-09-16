@@ -1,3 +1,4 @@
+import type { MessageKey } from '@/features/i18n/locale';
 import type { DateRangeSettings, ScrapedImage } from './types';
 
 /** Windows the UI can filter by; `custom` uses explicit bounds instead. */
@@ -13,14 +14,14 @@ export const DEFAULT_DATE_RANGE_SETTINGS: DateRangeSettings = {
   to: null,
 };
 
-export const DATE_RANGE_OPTIONS: ReadonlyArray<{ value: DateRangePreset; label: string }> = [
-  { value: 'all', label: 'All dates' },
-  { value: '1m', label: 'Last 1 month' },
-  { value: '3m', label: 'Last 3 months' },
-  { value: '6m', label: 'Last 6 months' },
-  { value: '8m', label: 'Last 8 months' },
-  { value: '12m', label: 'Last 12 months' },
-  { value: 'custom', label: 'Custom range' },
+export const DATE_RANGE_OPTIONS: ReadonlyArray<{ value: DateRangePreset; labelKey: MessageKey }> = [
+  { value: 'all', labelKey: 'range.all' },
+  { value: '1m', labelKey: 'range.1m' },
+  { value: '3m', labelKey: 'range.3m' },
+  { value: '6m', labelKey: 'range.6m' },
+  { value: '8m', labelKey: 'range.8m' },
+  { value: '12m', labelKey: 'range.12m' },
+  { value: 'custom', labelKey: 'range.custom' },
 ];
 
 const PRESET_MONTHS: Partial<Record<DateRangePreset, number>> = {

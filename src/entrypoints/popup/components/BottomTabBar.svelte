@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Clock, Home, Info, Settings } from 'lucide-svelte';
+import { type MessageKey, t } from '@/features/i18n/locale';
 
 let {
   activeTab,
@@ -9,17 +10,17 @@ let {
   onTabChange: (tab: string) => void;
 } = $props();
 
-const tabs = [
-  { id: 'home', label: 'Home', icon: Home },
-  { id: 'history', label: 'History', icon: Clock },
-  { id: 'about', label: 'About', icon: Info },
-  { id: 'settings', label: 'Settings', icon: Settings },
+const tabs: { id: string; labelKey: MessageKey; icon: typeof Home }[] = [
+  { id: 'home', labelKey: 'nav.home', icon: Home },
+  { id: 'history', labelKey: 'nav.history', icon: Clock },
+  { id: 'about', labelKey: 'nav.about', icon: Info },
+  { id: 'settings', labelKey: 'nav.settings', icon: Settings },
 ];
 </script>
 
 <nav
   class="fixed bottom-0 left-0 right-0 z-40 flex items-stretch border-t border-border bg-surface"
-  aria-label="Main navigation"
+  aria-label={$t('nav.ariaLabel')}
 >
   {#each tabs as tab}
     {@const isActive = activeTab === tab.id}
@@ -37,7 +38,7 @@ const tabs = [
       >
         <tab.icon size={20} />
       </span>
-      <span>{tab.label}</span>
+      <span>{$t(tab.labelKey)}</span>
     </button>
   {/each}
 </nav>

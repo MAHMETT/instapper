@@ -1,6 +1,7 @@
 <script lang="ts">
 import { ExternalLink } from 'lucide-svelte';
 import { browser } from 'wxt/browser';
+import { t } from '@/features/i18n/locale';
 
 // Read the manifest so this never drifts from package.json.
 const version = browser.runtime.getManifest().version;
@@ -17,18 +18,18 @@ const version = browser.runtime.getManifest().version;
     </span>
   </div>
 
-  <p class="text-sm text-fg-secondary">Grab thumbnails. Instantly.</p>
+  <p class="text-sm text-fg-secondary">{$t('home.tagline')}</p>
 
   <!-- Details -->
   <div class="w-full rounded-xl border border-border bg-surface p-4">
     <dl class="flex flex-col gap-3 text-sm">
       <div class="flex items-center justify-between">
-        <dt class="text-fg-muted">Version</dt>
+        <dt class="text-fg-muted">{$t('about.version')}</dt>
         <dd class="font-mono text-xs text-fg-secondary">{version}</dd>
       </div>
       <div class="h-px bg-border"></div>
       <div class="flex flex-col gap-1.5">
-        <dt class="text-fg-muted">Contributors</dt>
+        <dt class="text-fg-muted">{$t('about.contributors')}</dt>
         <dd class="flex items-center gap-3">
           <a
             href="https://github.com/andikadevs"
@@ -66,7 +67,7 @@ const version = browser.runtime.getManifest().version;
       </div>
       <div class="h-px bg-border"></div>
       <div class="flex flex-col gap-1">
-        <dt class="text-fg-muted">Source</dt>
+        <dt class="text-fg-muted">{$t('about.source')}</dt>
         <dd>
           <a
             href="https://github.com/MAHMETT/instapper"
@@ -82,5 +83,5 @@ const version = browser.runtime.getManifest().version;
     </dl>
   </div>
 
-  <p class="text-xs text-fg-muted">Not affiliated with Instagram or Meta. Use responsibly.</p>
+  <p class="text-xs text-fg-muted">{$t('about.disclaimer')}</p>
 </div>

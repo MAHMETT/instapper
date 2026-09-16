@@ -3,6 +3,7 @@ import { ChevronLeft } from 'lucide-svelte';
 import { browser } from 'wxt/browser';
 import { buildCsv, exportFilename } from '@/features/export/csv';
 import { exportImagesZip } from '@/features/export/export';
+import { t } from '@/features/i18n/locale';
 import type { Theme } from '@/features/theme/theme';
 import {
   boundsForPreset,
@@ -240,7 +241,7 @@ $effect(() => {
   const unwatchScrape = scrapeState.watch((state) => {
     if (!state.stoppedByRange) return;
     scrolling = false;
-    message = 'Stopped: reached posts older than the selected date range.';
+    message = $t('msg.stoppedByRange');
     messageType = 'info';
     void scrapeState.setValue({ stoppedByRange: false });
   });
@@ -256,22 +257,25 @@ $effect(() => {
       exporting = false;
       exportProgress = null;
       if (state.failed > 0) {
-        message = `Exported ${state.total - state.failed} images, ${state.failed} failed.`;
+        message = $t('msg.exportedSome', {
+          count: state.total - state.failed,
+          failed: state.failed,
+        });
         messageType = 'error';
       } else {
-        message = `Exported ${state.total} images.`;
+        message = $t('msg.exportedAll', { count: state.total });
         messageType = 'info';
       }
     } else if (state.status === 'error') {
       exporting = false;
       exportProgress = null;
-      message = state.error || 'Export failed.';
+      message = state.error || $t('msg.exportFailed');
       messageType = 'error';
     } else {
       if (exporting) {
         exporting = false;
         exportProgress = null;
-        message = 'Export canceled.';
+        message = $t('msg.exportCanceled');
         messageType = 'info';
       }
     }
@@ -307,7 +311,7 @@ async function handleStart() {
     await sendMessage('startAutoScroll', undefined, tabId);
   } catch {
     scrolling = false;
-    message = 'Refresh the Instagram page and try again.';
+    message = $t('msg.refreshInstagram');
     messageType = 'error';
   }
 }
@@ -331,10 +335,10 @@ async function handleDownload() {
   const blobUrl = URL.createObjectURL(blob);
   try {
     await browser.downloads.download({ url: blobUrl, filename, saveAs: true });
-    message = 'Download started.';
+    message = $t('msg.downloadStarted');
     messageType = 'info';
   } catch {
-    message = 'Download failed.';
+    message = $t('msg.downloadFailed');
     messageType = 'error';
   } finally {
     setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
@@ -360,7 +364,7 @@ async function confirmClear() {
   await scrapedImages.setValue([]);
   showClearModal = false;
   images = [];
-  message = 'Data cleared.';
+  message = $t('msg.dataCleared');
   messageType = 'info';
 }
 
@@ -407,11 +411,11 @@ async function runZipExport(grouping: ZipGrouping) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       showExportModal = false;
       exportPhase = 'choose';
-      message = 'Export canceled.';
+      message = $t('msg.exportCanceled');
       messageType = 'info';
     } else {
       exportPhase = 'error';
-      exportError = err instanceof Error ? err.message : 'Export failed.';
+      exportError = err instanceof Error ? err.message : $t('msg.exportFailed');
     }
   } finally {
     exporting = false;
@@ -427,7 +431,7 @@ async function runZipExport(grouping: ZipGrouping) {
       <button
         type="button"
         class="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-secondary transition-colors hover:bg-surface-secondary hover:text-fg focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
-        aria-label="Back to Home"
+        aria-label={$t('header.backHome')}
         onclick={onBack}
       >
         <ChevronLeft size={18} />
@@ -440,27 +444,29 @@ async function runZipExport(grouping: ZipGrouping) {
           ? 'bg-success/15 text-success'
           : 'bg-surface-secondary text-fg-muted'}"
         onclick={switchToTab}
-        title={connected ? 'Switch to connected tab' : 'No Instagram tab found'}
+        title={connected ? $t('header.switchTab') : $t('header.noTab')}
       >
         {#if connected}
           <span class="h-1.5 w-1.5 rounded-full bg-success animate-pulse"></span>
         {/if}
-        {connected ? 'Connected' : 'Ready'}
+        {connected ? $t('header.connected') : $t('header.ready')}
       </button>
     {/snippet}
   </BrandHeader>
 
   <main class="flex flex-1 flex-col rounded-xl border border-border bg-surface p-6">
     <div class="mb-5">
-      <h1 class="text-lg font-bold text-fg">Extract thumbnails</h1>
-      <p class="mt-1 text-sm text-fg-secondary">Grab thumbnails. Instantly.</p>
+      <h1 class="text-lg font-bold text-fg">{$t('extract.title')}</h1>
+      <p class="mt-1 text-sm text-fg-secondary">{$t('extract.tagline')}</p>
     </div>
 
     <StatsCard count={visibleCount} total={count} {pop} />
 
     <div class="mt-4 flex flex-col gap-2">
       <div class="flex items-center justify-between gap-2">
-        <label for="date-range" class="text-xs font-medium text-fg-secondary">Date range</label>
+        <label for="date-range" class="text-xs font-medium text-fg-secondary"
+          >{$t('extract.dateRange')}</label
+        >
         <select
           id="date-range"
           value={dateRange.preset}
@@ -468,7 +474,7 @@ async function runZipExport(grouping: ZipGrouping) {
           class="rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs font-medium text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
         >
           {#each DATE_RANGE_OPTIONS as option}
-            <option value={option.value}>{option.label}</option>
+            <option value={option.value}>{$t(option.labelKey)}</option>
           {/each}
         </select>
       </div>
@@ -477,15 +483,15 @@ async function runZipExport(grouping: ZipGrouping) {
         <div class="flex items-center gap-2">
           <input
             type="date"
-            aria-label="From date"
+            aria-label={$t('extract.from')}
             value={dateRange.from ?? ''}
             oninput={(e) => setCustomFrom(e.currentTarget.value)}
             class="w-full rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
           >
-          <span class="shrink-0 text-xs text-fg-muted">to</span>
+          <span class="shrink-0 text-xs text-fg-muted">{$t('extract.toWord')}</span>
           <input
             type="date"
-            aria-label="To date"
+            aria-label={$t('extract.to')}
             value={dateRange.to ?? ''}
             oninput={(e) => setCustomTo(e.currentTarget.value)}
             class="w-full rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
@@ -522,9 +528,9 @@ async function runZipExport(grouping: ZipGrouping) {
 
   <ConfirmClearDialog
     bind:open={showClearModal}
-    title="Start a new collection?"
-    description="The current session is saved to History first, then the thumbnails are cleared so you can scrape fresh."
-    confirmLabel="Save and clear"
+    title={$t('clear.title')}
+    description={$t('clear.description')}
+    confirmLabel={$t('clear.confirm')}
     onConfirm={confirmClear}
   />
   <ExportZipDialog

@@ -1,6 +1,7 @@
 <script lang="ts">
 import { ChevronRight, Clock, Trash } from 'lucide-svelte';
 import ImageIcon from 'lucide-svelte/icons/image';
+import { currentLocale, formatDateTime, t } from '@/features/i18n/locale';
 import { currentSession, scrapedImages, scrapingHistory } from '@/shared/storage';
 import type { ScrapingSession } from '@/shared/types';
 import ConfirmClearDialog from '../components/ConfirmClearDialog.svelte';
@@ -38,19 +39,6 @@ $effect(() => {
 });
 
 // ── Helpers ─────────────────────────────────────────────
-function formatDate(ts: number): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-    .format(new Date(ts))
-    .replace(',', ',');
-}
-
 function truncateUrl(url: string, max = 30): string {
   if (url.length <= max) return url;
   return `${url.slice(0, max)}\u2026`;
@@ -69,8 +57,8 @@ async function clearAllHistory() {
 
 <div class="flex flex-1 flex-col gap-3 p-4">
   <div class="flex flex-col gap-0.5">
-    <h1 class="text-lg font-bold text-fg">History</h1>
-    <p class="text-sm text-fg-secondary">Past scraping sessions</p>
+    <h1 class="text-lg font-bold text-fg">{$t('history.title')}</h1>
+    <p class="text-sm text-fg-secondary">{$t('history.subtitle')}</p>
   </div>
 
   {#if hasActiveSession}
@@ -89,7 +77,7 @@ async function clearAllHistory() {
         <span
           class="inline-flex w-fit items-center rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-success"
         >
-          Active Session
+          {$t('history.activeSession')}
         </span>
         {#if activeSessionUrl}
           <span class="truncate font-mono text-xs text-fg-secondary" title={activeSessionUrl}>
@@ -97,9 +85,7 @@ async function clearAllHistory() {
           </span>
         {/if}
         <span class="text-xs text-fg-muted">
-          {activeImageCount}
-          thumbnail{activeImageCount !== 1 ? 's' : ''}
-          collected
+          {$t('history.collected', { count: activeImageCount })}
         </span>
       </div>
       <ChevronRight
@@ -121,7 +107,9 @@ async function clearAllHistory() {
             onclick={() => onViewDetail(session)}
           >
             <div class="flex min-w-0 flex-1 flex-col gap-1">
-              <span class="text-xs font-medium text-fg">{formatDate(session.date)}</span>
+              <span class="text-xs font-medium text-fg"
+                >{formatDateTime(session.date, $currentLocale)}</span
+              >
               <span class="truncate font-mono text-[11px] text-fg-muted" title={session.sourceUrl}>
                 {truncateUrl(session.sourceUrl)}
               </span>
@@ -140,7 +128,7 @@ async function clearAllHistory() {
           <button
             type="button"
             class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-fg-muted opacity-0 transition-all hover:bg-danger/10 hover:text-danger focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2 group-hover:opacity-100"
-            aria-label="Delete session"
+            aria-label={$t('history.deleteSession')}
             onclick={() => deleteSession(session.id)}
           >
             <Trash size={14} />
@@ -156,21 +144,21 @@ async function clearAllHistory() {
         onclick={() => (showClearDialog = true)}
       >
         <Trash size={14} />
-        Clear All History
+        {$t('history.clearAll')}
       </button>
     </div>
   {:else if !hasActiveSession}
     <div class="flex flex-1 flex-col items-center justify-center gap-3 p-4">
       <Clock size={32} class="text-fg-muted" />
-      <p class="text-sm font-medium text-fg-muted">No history yet</p>
+      <p class="text-sm font-medium text-fg-muted">{$t('history.empty')}</p>
     </div>
   {/if}
 
   <ConfirmClearDialog
     bind:open={showClearDialog}
-    title="Delete all history?"
-    description="This permanently removes every saved session. Any ZIP or CSV you already exported is not affected."
-    confirmLabel="Delete all"
+    title={$t('clearHistory.title')}
+    description={$t('clearHistory.description')}
+    confirmLabel={$t('clearHistory.confirm')}
     onConfirm={clearAllHistory}
   />
 </div>

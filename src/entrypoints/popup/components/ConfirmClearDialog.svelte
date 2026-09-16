@@ -1,5 +1,6 @@
 <script lang="ts">
 import { AlertDialog } from 'bits-ui';
+import { t } from '@/features/i18n/locale';
 
 let {
   open = $bindable(false),
@@ -32,7 +33,7 @@ let {
         <AlertDialog.Cancel
           class="flex-1 rounded-lg border border-border bg-surface-secondary px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-border/50 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
         >
-          Cancel
+          {$t('common.cancel')}
         </AlertDialog.Cancel>
         <AlertDialog.Action
           class="flex-1 rounded-lg bg-danger px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-danger/90 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"

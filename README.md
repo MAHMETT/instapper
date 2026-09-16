@@ -38,6 +38,7 @@ No account, no server, no telemetry. Everything runs locally in your browser.
 - **One format in the archive** — every thumbnail is converted to PNG or JPEG on export (images already in that format are kept as-is). Pick the target in **Settings**.
 - **Date range filter** — narrow thumbnails by post date: last 1/3/6/8/12 months, all dates, or a custom from/to range (defaults to the last 8 months, and is remembered between sessions). The counter shows in-range over total, and scraping stops on its own once it scrolls past the range. Thumbnails whose post date can't be determined are always kept.
 - **Optional sort on export** — choose per export whether the ZIP stays flat or groups files into `YYYY-MM/` folders, oldest first.
+- **English & Indonesian** — the interface ships in Indonesian by default. Switch languages in **Settings** and it applies immediately, everywhere, and is remembered.
 - **Light & dark** — a proper theme toggle, dark by default.
 - **Chrome, Firefox & Safari** — one codebase, three browsers, via WXT.
 
