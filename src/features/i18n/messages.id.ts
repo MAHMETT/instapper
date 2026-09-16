@@ -78,7 +78,7 @@ export const id: Record<MessageKey, Message> = {
   // Reset dialog (extract page)
   'clear.title': 'Mulai koleksi baru?',
   'clear.description':
-    'Sesi saat ini disimpan ke Riwayat lebih dulu, lalu thumbnail dibersihkan supaya Anda bisa mengambil dari awal.',
+    '{count} thumbnail dalam rentang tanggal yang dipilih disimpan ke Riwayat, lalu koleksi dibersihkan supaya Anda bisa mengambil dari awal.',
   'clear.confirm': 'Simpan dan bersihkan',
 
   // Clear history dialog

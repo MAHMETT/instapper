@@ -76,7 +76,7 @@ export const en = {
   // Reset dialog (extract page)
   'clear.title': 'Start a new collection?',
   'clear.description':
-    'The current session is saved to History first, then the thumbnails are cleared so you can scrape fresh.',
+    'The {count} thumbnails inside the selected date range are saved to History, then the collection is cleared so you can scrape fresh.',
   'clear.confirm': 'Save and clear',
 
   // Clear history dialog

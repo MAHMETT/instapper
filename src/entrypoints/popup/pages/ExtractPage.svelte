@@ -349,14 +349,17 @@ async function handleDownload() {
 
 async function confirmClear() {
   const found = await scrapedImages.getValue();
+  // Only what falls inside the selected date range goes to History, so the
+  // archive matches what the user can see and export.
+  const selected = filterByDateRange(found, bounds);
   const session = await currentSession.getValue();
-  if (found.length > 0) {
+  if (selected.length > 0) {
     const entry: ScrapingSession = {
       id: crypto.randomUUID(),
       date: Date.now(),
       sourceUrl: session?.sourceUrl ?? 'unknown',
-      thumbnailCount: found.length,
-      images: found,
+      thumbnailCount: selected.length,
+      images: selected,
     };
     const history = await scrapingHistory.getValue();
     const updated = [entry, ...history].slice(0, 50);
@@ -532,7 +535,7 @@ async function runZipExport(grouping: ZipGrouping) {
   <ConfirmClearDialog
     bind:open={showClearModal}
     title={$t('clear.title')}
-    description={$t('clear.description')}
+    description={$t('clear.description', { count: visibleCount })}
     confirmLabel={$t('clear.confirm')}
     onConfirm={confirmClear}
   />
