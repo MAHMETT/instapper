@@ -95,9 +95,8 @@ export const en = {
   'extract.title': 'Extract thumbnails',
   'extract.tagline': 'Grab thumbnails. Instantly.',
   'extract.dateRange': 'Date range',
-  'extract.from': 'From date',
-  'extract.to': 'To date',
-  'extract.toWord': 'to',
+  'extract.from': 'From',
+  'extract.to': 'To',
 
   // Date range presets
   'range.all': 'All dates',

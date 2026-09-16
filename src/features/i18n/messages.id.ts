@@ -97,9 +97,8 @@ export const id: Record<MessageKey, Message> = {
   'extract.title': 'Ambil thumbnail',
   'extract.tagline': 'Ambil thumbnail. Seketika.',
   'extract.dateRange': 'Rentang tanggal',
-  'extract.from': 'Tanggal awal',
-  'extract.to': 'Tanggal akhir',
-  'extract.toWord': 'sampai',
+  'extract.from': 'Dari',
+  'extract.to': 'Sampai',
 
   // Date range presets
   'range.all': 'Semua tanggal',

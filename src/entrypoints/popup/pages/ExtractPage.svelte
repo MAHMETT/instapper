@@ -486,23 +486,24 @@ async function runZipExport(grouping: ZipGrouping) {
       </div>
 
       {#if dateRange.preset === 'custom'}
-        <div class="flex items-center gap-2">
+        <label class="flex items-center gap-2">
+          <span class="w-14 shrink-0 text-xs text-fg-muted">{$t('extract.from')}</span>
           <input
             type="date"
-            aria-label={$t('extract.from')}
             value={dateRange.from ?? ''}
             oninput={(e) => setCustomFrom(e.currentTarget.value)}
-            class="w-full rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
+            class="min-w-0 flex-1 rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
           >
-          <span class="shrink-0 text-xs text-fg-muted">{$t('extract.toWord')}</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <span class="w-14 shrink-0 text-xs text-fg-muted">{$t('extract.to')}</span>
           <input
             type="date"
-            aria-label={$t('extract.to')}
             value={dateRange.to ?? ''}
             oninput={(e) => setCustomTo(e.currentTarget.value)}
-            class="w-full rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
+            class="min-w-0 flex-1 rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
           >
-        </div>
+        </label>
       {/if}
     </div>
 
