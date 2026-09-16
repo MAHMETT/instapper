@@ -46,11 +46,10 @@ No account, no server, no telemetry. Everything runs locally in your browser.
 
 Grab a ready-to-use build from the [**Releases page**](https://github.com/MAHMETT/instapper/releases):
 
-- Chrome / Edge — `instapper-1.2.0-chrome.zip`
-- Firefox — `instapper-1.2.0-firefox.zip`
-- Safari — `instapper-1.2.0-safari.zip`
+- Chrome / Edge — `instapper-1.3.0-chrome.zip`
+- Firefox — `instapper-1.3.0-firefox.zip`
 
-> Replace `1.2.0` with the latest version shown on the Releases page.
+> Replace `1.3.0` with the latest version shown on the Releases page.
 
 These aren't on the official stores yet, so "installing" just means unzipping and loading the folder. It takes about a minute.
 
