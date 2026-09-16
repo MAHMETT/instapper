@@ -1,9 +1,10 @@
 import { exportFilename } from '@/features/export/csv';
 import { buildImageZip, zipBlobUrl } from '@/features/export/zip';
-import type { ZipImageFormat } from '@/shared/types';
+import type { ScrapedImage, ZipGrouping, ZipImageFormat } from '@/shared/types';
 
 export interface ExportImagesOptions {
   format: ZipImageFormat;
+  grouping?: ZipGrouping;
   onProgress?: (p: { phase: 'fetching' | 'zipping'; done: number; total: number }) => void;
   signal?: AbortSignal;
   filename?: string;
@@ -18,16 +19,16 @@ export interface ExportImagesResult {
 
 /** Fetch images, bundle into ZIP, and trigger download — runs directly in popup. */
 export async function exportImagesZip(
-  urls: string[],
+  images: ScrapedImage[],
   options: ExportImagesOptions,
 ): Promise<ExportImagesResult> {
-  const { format, onProgress, signal, filename } = options;
+  const { format, grouping, onProgress, signal, filename } = options;
 
-  if (urls.length === 0) {
+  if (images.length === 0) {
     return { ok: false, total: 0, failed: 0, error: 'No images to export' };
   }
 
-  const total = urls.length;
+  const total = images.length;
   let failed = 0;
 
   try {
@@ -35,8 +36,9 @@ export async function exportImagesZip(
       throw new DOMException('Export aborted', 'AbortError');
     }
 
-    const result = await buildImageZip(urls, {
+    const result = await buildImageZip(images, {
       format,
+      grouping,
       signal,
       onProgress: (p) => onProgress?.({ phase: p.phase, done: p.done, total: p.total }),
     });

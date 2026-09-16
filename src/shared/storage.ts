@@ -2,15 +2,46 @@ import { storage } from 'wxt/utils/storage';
 import type {
   CurrentSession,
   ExportJobState,
+  ScrapedImage,
   ScrapedImages,
   ScrapingSession,
   Settings,
   UIState,
 } from './types';
 
-/** Single source of thumbnail data shared between popup and content script. */
+/** Accept both shapes so migrations stay idempotent. */
+function toScrapedImages(value: unknown): ScrapedImage[] {
+  if (!Array.isArray(value)) return [];
+  const images: ScrapedImage[] = [];
+  for (const entry of value) {
+    if (typeof entry === 'string') {
+      images.push({ url: entry, takenAt: null });
+    } else if (entry && typeof (entry as ScrapedImage).url === 'string') {
+      const image = entry as ScrapedImage;
+      images.push({ url: image.url, takenAt: image.takenAt ?? null });
+    }
+  }
+  return images;
+}
+
+function toScrapingSessions(value: unknown): ScrapingSession[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((session) => ({
+    ...(session as ScrapingSession),
+    images: toScrapedImages((session as { images?: unknown })?.images),
+  }));
+}
+
+/**
+ * Single source of thumbnail data shared between popup and content script.
+ * v1 stored bare URL strings, so v2 backfills a null publish time for them.
+ */
 export const scrapedImages = storage.defineItem<ScrapedImages>('local:scrapedImages', {
   fallback: [],
+  version: 2,
+  migrations: {
+    2: (oldValue: unknown) => toScrapedImages(oldValue),
+  },
 });
 
 export const exportJob = storage.defineItem<ExportJobState>('local:exportJob', {
@@ -19,6 +50,10 @@ export const exportJob = storage.defineItem<ExportJobState>('local:exportJob', {
 
 export const scrapingHistory = storage.defineItem<ScrapingSession[]>('local:scrapingHistory', {
   fallback: [],
+  version: 2,
+  migrations: {
+    2: (oldValue: unknown) => toScrapingSessions(oldValue),
+  },
 });
 
 export const uiState = storage.defineItem<UIState>('local:uiState', {

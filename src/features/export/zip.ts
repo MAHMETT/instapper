@@ -1,6 +1,6 @@
 import { zipSync } from 'fflate';
 import { convertImage, targetExt } from '@/features/export/convert';
-import type { ZipImageFormat } from '@/shared/types';
+import type { ScrapedImage, ZipGrouping, ZipImageFormat } from '@/shared/types';
 
 const CONCURRENCY = 4;
 
@@ -13,6 +13,8 @@ export interface ZipProgress {
 
 export interface BuildZipOptions {
   format: ZipImageFormat;
+  /** 'by-date' orders by publish time and files each image under its month. */
+  grouping?: ZipGrouping;
   signal?: AbortSignal;
   onProgress?: (progress: ZipProgress) => void | Promise<void>;
 }
@@ -27,19 +29,36 @@ function pad(n: number, width: number): string {
   return String(n).padStart(width, '0');
 }
 
+/** Oldest first; undated thumbnails keep their order and sink to the end. */
+export function sortedByDate(images: ScrapedImage[]): ScrapedImage[] {
+  return [...images].sort((a, b) => {
+    if (a.takenAt === null) return b.takenAt === null ? 0 : 1;
+    if (b.takenAt === null) return -1;
+    return a.takenAt - b.takenAt;
+  });
+}
+
+/** Folder for a thumbnail, e.g. `2025-03`, or `unknown-date` when undated. */
+export function folderFor(takenAt: number | null): string {
+  if (takenAt === null) return 'unknown-date';
+  const date = new Date(takenAt);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
 /**
- * Fetch every URL, re-encode it to `format` unless it already is that format,
+ * Fetch every image, re-encode it to `format` unless it already is that format,
  * and bundle the results into a ZIP archive. Throws when nothing was collected.
  */
 export async function buildImageZip(
-  urls: string[],
-  { format, signal, onProgress }: BuildZipOptions,
+  images: ScrapedImage[],
+  { format, grouping = 'flat', signal, onProgress }: BuildZipOptions,
 ): Promise<BuildZipResult> {
-  const total = urls.length;
+  const ordered = grouping === 'by-date' ? sortedByDate(images) : images;
+  const total = ordered.length;
   const width = String(total).length;
   const ext = targetExt(format);
   const files: Record<string, Uint8Array> = {};
-  const queue = [...urls.entries()];
+  const queue = [...ordered.entries()];
   let done = 0;
   let failed = 0;
 
@@ -47,17 +66,15 @@ export async function buildImageZip(
     while (queue.length > 0) {
       const item = queue.shift();
       if (!item) break;
-      const [index, url] = item;
+      const [index, image] = item;
+      const name = `image-${pad(index + 1, width)}.${ext}`;
       try {
-        const res = await fetch(url, { signal, credentials: 'omit' });
+        const res = await fetch(image.url, { signal, credentials: 'omit' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const bytes = new Uint8Array(await res.arrayBuffer());
         const contentType = (res.headers.get('content-type') ?? '').split(';')[0]?.trim() ?? '';
-        files[`image-${pad(index + 1, width)}.${ext}`] = await convertImage(
-          bytes,
-          contentType,
-          format,
-        );
+        const path = grouping === 'by-date' ? `${folderFor(image.takenAt)}/${name}` : name;
+        files[path] = await convertImage(bytes, contentType, format);
       } catch (err) {
         if (signal?.aborted) throw err;
         failed++;

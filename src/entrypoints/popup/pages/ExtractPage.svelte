@@ -3,8 +3,16 @@ import { ChevronLeft } from 'lucide-svelte';
 import { browser } from 'wxt/browser';
 import { buildCsv, exportFilename } from '@/features/export/csv';
 import { exportImagesZip } from '@/features/export/export';
-import { isPopoutMode } from '@/features/popout/popout';
 import type { Theme } from '@/features/theme/theme';
+import {
+  boundsForPreset,
+  DATE_RANGE_OPTIONS,
+  type DateRangePreset,
+  DEFAULT_DATE_RANGE,
+  dayBound,
+  filterByDateRange,
+  toDateInputValue,
+} from '@/shared/date-range';
 import { sendMessage } from '@/shared/messaging';
 import {
   currentSession,
@@ -13,10 +21,16 @@ import {
   scrapingHistory,
   settings,
 } from '@/shared/storage';
-import type { ExportProgress as ExportProgressType, ScrapingSession } from '@/shared/types';
+import type {
+  ExportProgress as ExportProgressType,
+  ScrapedImage,
+  ScrapingSession,
+  ZipGrouping,
+} from '@/shared/types';
 import ActionBar from '../components/ActionBar.svelte';
 import BrandHeader from '../components/BrandHeader.svelte';
 import ConfirmClearDialog from '../components/ConfirmClearDialog.svelte';
+import ExportZipDialog from '../components/ExportZipDialog.svelte';
 import StatsCard from '../components/StatsCard.svelte';
 
 let {
@@ -35,15 +49,21 @@ let {
   onPopout: () => void;
 } = $props();
 
-let count = $state(0);
+let images = $state<ScrapedImage[]>([]);
 let scrolling = $state(false);
 let message = $state('');
 let messageType = $state<'info' | 'error'>('info');
 let showClearModal = $state(false);
+let showExportModal = $state(false);
 let tabId = $state<number | undefined>(undefined);
 let prevCount = $state(0);
 let pop = $state(false);
 let popTimer: ReturnType<typeof setTimeout> | undefined;
+
+// Date range filter
+let datePreset = $state<DateRangePreset>(DEFAULT_DATE_RANGE);
+let customFrom = $state(toDateInputValue(boundsForPreset(DEFAULT_DATE_RANGE).from ?? Date.now()));
+let customTo = $state(toDateInputValue(Date.now()));
 
 // Export state
 let exporting = $state(false);
@@ -51,7 +71,14 @@ let exportProgress = $state<ExportProgressType | null>(null);
 let abortController = $state<AbortController | null>(null);
 
 // ── Derived ──────────────────────────────────────────────
-const canDownload = $derived(count > 0);
+const count = $derived(images.length);
+const bounds = $derived(
+  datePreset === 'custom'
+    ? { from: dayBound(customFrom, 'start'), to: dayBound(customTo, 'end') }
+    : boundsForPreset(datePreset),
+);
+const visibleImages = $derived(filterByDateRange(images, bounds));
+const canExport = $derived(visibleImages.length > 0);
 const exportPercent = $derived(
   exportProgress && exportProgress.total > 0
     ? Math.round((exportProgress.done / exportProgress.total) * 100)
@@ -152,8 +179,8 @@ $effect(() => {
 // Initialize: target tab, count, scrolling state
 $effect(() => {
   resolveTab().then(() => {
-    scrapedImages.getValue().then((images) => {
-      count = images.length;
+    scrapedImages.getValue().then((found) => {
+      images = found;
     });
 
     if (tabId !== undefined) {
@@ -165,8 +192,8 @@ $effect(() => {
     }
   });
 
-  const unwatch = scrapedImages.watch((images) => {
-    count = images.length;
+  const unwatch = scrapedImages.watch((found) => {
+    images = found;
   });
 
   const unwatchJob = exportJob.watch((state) => {
@@ -245,9 +272,9 @@ async function handleStop() {
 }
 
 async function handleDownload() {
-  const images = await scrapedImages.getValue();
-  if (images.length === 0) return;
-  const csv = buildCsv(images);
+  const selected = visibleImages;
+  if (selected.length === 0) return;
+  const csv = buildCsv(selected.map((image) => image.url));
   const filename = exportFilename('csv');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const blobUrl = URL.createObjectURL(blob);
@@ -264,15 +291,15 @@ async function handleDownload() {
 }
 
 async function confirmClear() {
-  const images = await scrapedImages.getValue();
+  const found = await scrapedImages.getValue();
   const session = await currentSession.getValue();
-  if (images.length > 0) {
+  if (found.length > 0) {
     const entry: ScrapingSession = {
       id: crypto.randomUUID(),
       date: Date.now(),
       sourceUrl: session?.sourceUrl ?? 'unknown',
-      thumbnailCount: images.length,
-      images,
+      thumbnailCount: found.length,
+      images: found,
     };
     const history = await scrapingHistory.getValue();
     const updated = [entry, ...history].slice(0, 50);
@@ -281,15 +308,19 @@ async function confirmClear() {
   await currentSession.setValue(null);
   await scrapedImages.setValue([]);
   showClearModal = false;
-  count = 0;
+  images = [];
   message = 'Data cleared.';
   messageType = 'info';
 }
 
-async function handleExport() {
-  if (exporting) return;
-  const images = await scrapedImages.getValue();
-  if (images.length === 0) return;
+function handleExport() {
+  if (exporting || !canExport) return;
+  showExportModal = true;
+}
+
+async function runZipExport(grouping: ZipGrouping) {
+  const selected = visibleImages;
+  if (exporting || selected.length === 0) return;
 
   const { zipImageFormat } = await settings.getValue();
   const controller = new AbortController();
@@ -299,8 +330,9 @@ async function handleExport() {
   message = '';
 
   try {
-    const result = await exportImagesZip(images, {
+    const result = await exportImagesZip(selected, {
       format: zipImageFormat,
+      grouping,
       signal: controller.signal,
       onProgress: (p) => {
         exportProgress = p;
@@ -367,10 +399,49 @@ async function handleExport() {
 
     <StatsCard {count} {pop} />
 
+    <div class="mt-4 flex flex-col gap-2">
+      <div class="flex items-center justify-between gap-2">
+        <label for="date-range" class="text-xs font-medium text-fg-secondary">Date range</label>
+        <select
+          id="date-range"
+          value={datePreset}
+          onchange={(e) => (datePreset = e.currentTarget.value as DateRangePreset)}
+          class="rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs font-medium text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
+        >
+          {#each DATE_RANGE_OPTIONS as option}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+      </div>
+
+      {#if datePreset === 'custom'}
+        <div class="flex items-center gap-2">
+          <input
+            type="date"
+            aria-label="From date"
+            bind:value={customFrom}
+            class="w-full rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
+          >
+          <span class="shrink-0 text-xs text-fg-muted">to</span>
+          <input
+            type="date"
+            aria-label="To date"
+            bind:value={customTo}
+            class="w-full rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
+          >
+        </div>
+      {/if}
+
+      {#if visibleImages.length !== count}
+        <p class="text-xs text-fg-muted">Showing {visibleImages.length} of {count} thumbnails</p>
+      {/if}
+    </div>
+
     <div class="mt-4">
       <ActionBar
         {scrolling}
-        {canDownload}
+        hasImages={count > 0}
+        {canExport}
         {exporting}
         {exportProgress}
         {exportPercent}
@@ -396,4 +467,9 @@ async function handleExport() {
   </main>
 
   <ConfirmClearDialog bind:open={showClearModal} onConfirm={confirmClear} />
+  <ExportZipDialog
+    bind:open={showExportModal}
+    count={visibleImages.length}
+    onConfirm={runZipExport}
+  />
 </div>

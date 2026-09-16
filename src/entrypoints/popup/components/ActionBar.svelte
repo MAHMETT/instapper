@@ -6,7 +6,8 @@ import ExportProgress from './ExportProgress.svelte';
 
 let {
   scrolling,
-  canDownload,
+  hasImages,
+  canExport,
   exporting,
   exportProgress,
   exportPercent,
@@ -18,7 +19,10 @@ let {
   onClear,
 }: {
   scrolling: boolean;
-  canDownload: boolean;
+  /** Whether the collection holds anything at all — keeps Reset reachable. */
+  hasImages: boolean;
+  /** Whether the active date filter leaves anything to export. */
+  canExport: boolean;
   exporting: boolean;
   exportProgress: ExportProgressType | null;
   exportPercent: number;
@@ -30,7 +34,7 @@ let {
   onClear: () => void;
 } = $props();
 
-const stopped = $derived(!scrolling && canDownload);
+const stopped = $derived(!scrolling && hasImages);
 </script>
 
 <div class="flex flex-col gap-2.5">
@@ -143,14 +147,14 @@ const stopped = $derived(!scrolling && canDownload);
               {...props}
               type="button"
               class="flex-1 rounded-lg border border-border bg-surface-secondary px-3 py-2.5 text-xs font-medium text-fg transition-all hover:bg-border/50 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-              disabled={!canDownload}
+              disabled={!canExport}
               onclick={onDownload}
             >
               <span class="inline-flex items-center gap-1.5">
                 <span
-                  class="inline-block transition-transform {canDownload
+                  class="inline-block transition-transform {canExport
                     ? 'animate-[bounce_0.6s_ease-in-out]'
-                    : ''} {canDownload ? '' : 'opacity-40'}"
+                    : ''} {canExport ? '' : 'opacity-40'}"
                 >
                   <Download size={14} />
                 </span>
@@ -173,14 +177,14 @@ const stopped = $derived(!scrolling && canDownload);
     <button
       type="button"
       class="flex-1 rounded-lg border border-border bg-surface-secondary px-3 py-2.5 text-xs font-medium text-fg transition-all hover:bg-border/50 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-      disabled={!canDownload || exporting}
+      disabled={!canExport || exporting}
       onclick={onExport}
     >
       <span class="inline-flex items-center gap-1.5">
         <span
-          class="inline-block transition-transform {canDownload && !exporting
+          class="inline-block transition-transform {canExport && !exporting
             ? 'animate-[bounce_0.6s_ease-in-out]'
-            : ''} {canDownload && !exporting ? '' : 'opacity-40'}"
+            : ''} {canExport && !exporting ? '' : 'opacity-40'}"
         >
           <Download size={14} />
         </span>

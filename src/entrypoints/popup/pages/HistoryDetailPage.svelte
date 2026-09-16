@@ -4,7 +4,7 @@ import { browser } from 'wxt/browser';
 import { buildCsv, exportFilename } from '@/features/export/csv';
 import { buildImageZip, zipBlobUrl } from '@/features/export/zip';
 import { settings } from '@/shared/storage';
-import type { ScrapingSession } from '@/shared/types';
+import type { ScrapedImage, ScrapingSession } from '@/shared/types';
 
 let {
   session,
@@ -12,7 +12,7 @@ let {
   onBack,
 }: {
   session: ScrapingSession;
-  images: string[];
+  images: ScrapedImage[];
   onBack: () => void;
 } = $props();
 
@@ -34,7 +34,7 @@ function formatDate(ts: number): string {
 
 async function downloadCsv() {
   if (!hasImages) return;
-  const csv = buildCsv(images);
+  const csv = buildCsv(images.map((image) => image.url));
   const filename = exportFilename('csv');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const blobUrl = URL.createObjectURL(blob);

@@ -1,5 +1,7 @@
 import { scrapedImages } from '@/shared/storage';
+import type { ScrapedImage } from '@/shared/types';
 import { CONFIG } from './config';
+import { publishedAtFromHref } from './post-date';
 
 /** Check if an image is a profile/avatar photo based on alt text. */
 function isProfileImage(img: HTMLImageElement): boolean {
@@ -33,6 +35,24 @@ function isValidThumbnail(img: HTMLImageElement): boolean {
 }
 
 /**
+ * Publish time of the post a thumbnail belongs to. The shortcode in the
+ * surrounding post link encodes it; anything undecodable stays null and is kept
+ * by the date filter rather than hidden.
+ */
+function publishedAtFor(img: HTMLImageElement): number | null {
+  return publishedAtFromHref(img.closest('a[href]')?.getAttribute('href'));
+}
+
+function collect(selector: string, into: Map<string, ScrapedImage>): void {
+  for (const img of document.querySelectorAll<HTMLImageElement>(selector)) {
+    if (!isValidThumbnail(img)) continue;
+    const url = img.currentSrc || img.src;
+    if (!url || into.has(url)) continue;
+    into.set(url, { url, takenAt: publishedAtFor(img) });
+  }
+}
+
+/**
  * Find thumbnail images using a two-strategy approach:
  *
  * Strategy 1 (primary): Images inside post links — most reliable.
@@ -41,48 +61,44 @@ function isValidThumbnail(img: HTMLImageElement): boolean {
  * Strategy 2 (fallback): Broader article search with strict filtering.
  *   Only used when strategy 1 finds nothing (empty grid, page not loaded).
  */
-export function findImages(): string[] {
-  const urls = new Set<string>();
+export function findImages(): ScrapedImage[] {
+  const found = new Map<string, ScrapedImage>();
 
   // Strategy 1: Images directly inside post links (highest confidence)
-  for (const img of document.querySelectorAll<HTMLImageElement>(
-    CONFIG.SELECTORS.POST_LINK_IMAGES,
-  )) {
-    if (isValidThumbnail(img)) {
-      urls.add(img.currentSrc || img.src);
-    }
-  }
+  collect(CONFIG.SELECTORS.POST_LINK_IMAGES, found);
 
   // Strategy 2: Broader search — only if strategy 1 found nothing
-  if (urls.size === 0) {
-    for (const img of document.querySelectorAll<HTMLImageElement>(
-      CONFIG.SELECTORS.ARTICLE_IMAGES,
-    )) {
-      if (isValidThumbnail(img)) {
-        urls.add(img.currentSrc || img.src);
-      }
-    }
+  if (found.size === 0) {
+    collect(CONFIG.SELECTORS.ARTICLE_IMAGES, found);
   }
 
-  return [...urls];
+  return [...found.values()];
 }
 
-/** Merge found URLs into the existing list, returning only genuinely new entries. */
+/** Merge found images into the existing list, preserving the original order. */
 export function getUniqueImages(
-  existing: string[],
-  found: string[],
-): { updatedList: string[]; addedCount: number } {
-  const set = new Set(existing);
+  existing: ScrapedImage[],
+  found: ScrapedImage[],
+): { updatedList: ScrapedImage[]; addedCount: number; datedCount: number } {
+  const byUrl = new Map(existing.map((image) => [image.url, image]));
   let addedCount = 0;
+  let datedCount = 0;
 
-  for (const url of found) {
-    if (url && !set.has(url)) {
-      set.add(url);
+  for (const image of found) {
+    if (!image.url) continue;
+
+    const current = byUrl.get(image.url);
+    if (!current) {
+      byUrl.set(image.url, image);
       addedCount++;
+    } else if (current.takenAt === null && image.takenAt !== null) {
+      // Re-scraping fills in dates for thumbnails stored before we tracked them.
+      byUrl.set(image.url, { ...current, takenAt: image.takenAt });
+      datedCount++;
     }
   }
 
-  return { updatedList: [...set], addedCount };
+  return { updatedList: [...byUrl.values()], addedCount, datedCount };
 }
 
 /** Scrape the page, persist any new images, and return how many were added. */
@@ -91,9 +107,9 @@ export async function scrapeAndStore(): Promise<number> {
   if (found.length === 0) return 0;
 
   const existing = await scrapedImages.getValue();
-  const { updatedList, addedCount } = getUniqueImages(existing, found);
+  const { updatedList, addedCount, datedCount } = getUniqueImages(existing, found);
 
-  if (addedCount > 0) {
+  if (addedCount > 0 || datedCount > 0) {
     await scrapedImages.setValue(updatedList);
   }
 

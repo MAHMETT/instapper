@@ -1,15 +1,15 @@
 import { exportFilename } from '@/features/export/csv';
 import { buildImageZip, zipBlobUrl } from '@/features/export/zip';
 import { exportJob, settings } from '@/shared/storage';
-import type { ExportRunError, ExportRunResult } from '@/shared/types';
+import type { ExportRunError, ExportRunResult, ScrapedImage } from '@/shared/types';
 
 let activeController: AbortController | null = null;
 
 export async function runExport(
-  urls: string[],
+  images: ScrapedImage[],
   options?: { signal?: AbortSignal },
 ): Promise<ExportRunResult | ExportRunError> {
-  if (urls.length === 0) {
+  if (images.length === 0) {
     return { ok: false, error: 'No images to export' };
   }
 
@@ -20,7 +20,7 @@ export async function runExport(
     options.signal.addEventListener('abort', () => controller.abort(), { once: true });
   }
 
-  const total = urls.length;
+  const total = images.length;
 
   try {
     if (controller.signal.aborted) {
@@ -36,7 +36,7 @@ export async function runExport(
     });
 
     const { zipImageFormat } = await settings.getValue();
-    const { zip, failed } = await buildImageZip(urls, {
+    const { zip, failed } = await buildImageZip(images, {
       format: zipImageFormat,
       signal: controller.signal,
       onProgress: (progress) =>

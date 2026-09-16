@@ -1,4 +1,5 @@
 import { defineExtensionMessaging } from '@webext-core/messaging';
+import type { ScrapedImage } from './types';
 
 /**
  * Cross-context message contract.
@@ -9,7 +10,7 @@ export interface ProtocolMap {
   startAutoScroll(): { status: 'started' | 'already-running' };
   stopAutoScroll(): { status: 'stopped' };
   getStatus(): { isScrolling: boolean };
-  startExport(urls: string[]): { ok: boolean; error?: string };
+  startExport(images: ScrapedImage[]): { ok: boolean; error?: string };
   cancelExport(): void;
 }
 

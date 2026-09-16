@@ -36,6 +36,8 @@ No account, no server, no telemetry. Everything runs locally in your browser.
 - **Export CSV** — a clean list of image links, handy for scripts or spreadsheets.
 - **Export ZIP** — downloads the images themselves, bundled into a single archive.
 - **One format in the archive** — every thumbnail is converted to PNG or JPEG on export (images already in that format are kept as-is). Pick the target in **Settings**.
+- **Date range filter** — narrow thumbnails by post date before exporting: last 1/3/6/8/12 months, all dates, or a custom from/to range (defaults to the last 8 months). Thumbnails whose post date can't be determined are always kept.
+- **Optional sort on export** — choose per export whether the ZIP stays flat or groups files into `YYYY-MM/` folders, oldest first.
 - **Light & dark** — a proper theme toggle, dark by default.
 - **Chrome & Firefox** — one codebase, both browsers, via WXT.
 

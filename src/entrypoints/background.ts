@@ -52,7 +52,7 @@ export default defineBackground({
         chrome.runtime.sendMessage({
           target: 'offscreen',
           type: 'START_EXPORT',
-          urls: message.data,
+          images: message.data,
         });
         return { ok: true };
       });

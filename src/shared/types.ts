@@ -1,5 +1,15 @@
-/** List of unique thumbnail URLs stored in local storage. */
-export type ScrapedImages = string[];
+/** A scraped thumbnail and the publish time of the post it came from. */
+export interface ScrapedImage {
+  url: string;
+  /** Post publish time in ms since the Unix epoch, or null when undeterminable. */
+  takenAt: number | null;
+}
+
+/** Unique thumbnails stored in local storage. */
+export type ScrapedImages = ScrapedImage[];
+
+/** Whether an exported ZIP keeps a flat layout or buckets files by post month. */
+export type ZipGrouping = 'flat' | 'by-date';
 
 /** Image export progress to ZIP. */
 export interface ExportProgress {
@@ -39,7 +49,7 @@ export interface ScrapingSession {
   date: number;
   sourceUrl: string;
   thumbnailCount: number;
-  images: string[];
+  images: ScrapedImage[];
 }
 
 /** Image format every thumbnail is converted to inside an exported ZIP. */

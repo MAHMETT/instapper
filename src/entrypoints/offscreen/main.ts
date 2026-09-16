@@ -7,7 +7,7 @@ browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'START_EXPORT') {
     const port = browser.runtime.connect({ name: 'export-keepalive' });
 
-    runExport(msg.urls).then((result) => {
+    runExport(msg.images).then((result) => {
       if (result.ok) {
         browser.runtime.sendMessage({
           target: 'background',
