@@ -111,7 +111,11 @@ $effect(() => {
       {:else if phase === 'progress'}
         <Dialog.Title class="text-base font-semibold text-fg">Exporting ZIP</Dialog.Title>
         <Dialog.Description class="mt-1.5 text-sm text-fg-secondary">
-          Downloading and converting your thumbnails.
+          Downloading
+          {count}
+          thumbnail{count === 1 ? '' : 's'}
+          and
+          {grouping === 'by-date' ? 'filing them by month' : 'keeping one flat folder'}.
         </Dialog.Description>
 
         <div class="mt-4">
