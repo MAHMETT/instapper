@@ -133,6 +133,9 @@ export const en = {
   'detail.date': 'Date',
   'detail.source': 'Source',
   'detail.thumbnails': 'Thumbnails',
+  'detail.dateRange': 'Date range',
+  'detail.noDateRange': 'No publication dates available',
+  'detail.untimed': '{count} without a date',
   'detail.downloading': 'Downloading…',
   'detail.noImages': 'Images were not stored in this session. Re-scrape to download.',
 

@@ -1,7 +1,8 @@
 <script lang="ts">
 import { Separator, Tooltip } from 'bits-ui';
-import { Download, Pause, Play } from 'lucide-svelte';
+import { Pause, Play } from 'lucide-svelte';
 import { t } from '@/features/i18n/locale';
+import ExportButton from './ExportButton.svelte';
 
 let {
   scrolling,
@@ -140,24 +141,14 @@ const exportReady = $derived(canExport && !scrolling);
       <Tooltip.Root>
         <Tooltip.Trigger>
           {#snippet child({ props })}
-            <button
+            <ExportButton
               {...props}
-              type="button"
-              class="flex-1 rounded-lg border border-border bg-surface-secondary px-3 py-2.5 text-xs font-medium text-fg transition-all hover:bg-border/50 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              variant="csv"
+              labelKey="common.csv"
               disabled={!exportReady}
+              bounce={exportReady}
               onclick={onDownload}
-            >
-              <span class="inline-flex items-center gap-1.5">
-                <span
-                  class="inline-block transition-transform {exportReady
-                    ? 'animate-[bounce_0.6s_ease-in-out]'
-                    : ''} {exportReady ? '' : 'opacity-40'}"
-                >
-                  <Download size={14} />
-                </span>
-                {$t('common.csv')}
-              </span>
-            </button>
+            />
           {/snippet}
         </Tooltip.Trigger>
         <Tooltip.Content
@@ -171,23 +162,13 @@ const exportReady = $derived(canExport && !scrolling);
       </Tooltip.Root>
     </Tooltip.Provider>
 
-    <button
-      type="button"
-      class="flex-1 rounded-lg border border-border bg-surface-secondary px-3 py-2.5 text-xs font-medium text-fg transition-all hover:bg-border/50 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+    <ExportButton
+      variant="zip"
+      labelKey="common.zip"
       disabled={!exportReady || exporting}
+      bounce={exportReady && !exporting}
       onclick={onExport}
-    >
-      <span class="inline-flex items-center gap-1.5">
-        <span
-          class="inline-block transition-transform {exportReady && !exporting
-            ? 'animate-[bounce_0.6s_ease-in-out]'
-            : ''} {exportReady && !exporting ? '' : 'opacity-40'}"
-        >
-          <Download size={14} />
-        </span>
-        {$t('common.zip')}
-      </span>
-    </button>
+    />
   </div>
 
   {#if scrolling && hasImages}

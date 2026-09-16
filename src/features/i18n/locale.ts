@@ -53,6 +53,15 @@ export function formatDateTime(timestamp: number, locale: Locale): string {
   }).format(new Date(timestamp));
 }
 
+/** Date only, rendered in the user's interface language. */
+export function formatDate(timestamp: number, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_TAG[locale], {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(timestamp));
+}
+
 const localeStore = writable<Locale>(DEFAULT_LOCALE);
 
 /** The active locale. Use inside components so the store is tracked. */

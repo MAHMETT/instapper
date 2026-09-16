@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   boundsForPreset,
   boundsForRange,
+  dateSpanOf,
   dayBound,
   filterByDateRange,
   lowerBoundFor,
@@ -150,5 +151,31 @@ describe('lowerBoundFor', () => {
   it('returns null when the range has no floor', () => {
     expect(lowerBoundFor({ preset: 'all', from: null, to: null }, NOW)).toBeNull();
     expect(lowerBoundFor({ preset: 'custom', from: null, to: '2026-01-20' }, NOW)).toBeNull();
+  });
+});
+
+describe('dateSpanOf', () => {
+  const EARLY = Date.UTC(2025, 0, 1);
+  const LATE = Date.UTC(2026, 8, 1);
+
+  it('returns null when nothing has a date', () => {
+    expect(dateSpanOf([])).toBeNull();
+    expect(dateSpanOf([image('a', null), image('b', null)])).toBeNull();
+  });
+
+  it('spans the oldest to the newest dated thumbnail, whatever the order', () => {
+    expect(
+      dateSpanOf([image('mid', Date.UTC(2026, 5, 1)), image('new', LATE), image('old', EARLY)]),
+    ).toEqual({ from: EARLY, to: LATE });
+  });
+
+  it('ignores undated thumbnails but still spans the dated ones', () => {
+    expect(
+      dateSpanOf([image('undated', null), image('dated', EARLY), image('also', LATE)]),
+    ).toEqual({ from: EARLY, to: LATE });
+  });
+
+  it('collapses to a single point for one dated thumbnail', () => {
+    expect(dateSpanOf([image('only', EARLY)])).toEqual({ from: EARLY, to: EARLY });
   });
 });

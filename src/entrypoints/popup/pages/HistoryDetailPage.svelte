@@ -1,11 +1,13 @@
 <script lang="ts">
-import { ChevronLeft, Download } from 'lucide-svelte';
+import { ChevronLeft } from 'lucide-svelte';
 import { browser } from 'wxt/browser';
 import { buildCsv, exportFilename } from '@/features/export/csv';
 import { buildImageZip, zipBlobUrl } from '@/features/export/zip';
-import { currentLocale, formatDateTime, t } from '@/features/i18n/locale';
+import { currentLocale, formatDate, formatDateTime, t } from '@/features/i18n/locale';
+import { dateSpanOf } from '@/shared/date-range';
 import { settings } from '@/shared/storage';
 import type { ScrapedImage, ScrapingSession } from '@/shared/types';
+import ExportButton from '../components/ExportButton.svelte';
 
 let {
   session,
@@ -18,6 +20,10 @@ let {
 } = $props();
 
 const hasImages = $derived(images.length > 0);
+// What period this session actually covers, and how many thumbnails have no
+// publication date to place.
+const span = $derived(dateSpanOf(images));
+const untimed = $derived(images.filter((image) => image.takenAt === null).length);
 let downloading = $state(false);
 
 async function downloadCsv() {
@@ -85,33 +91,39 @@ async function downloadZip() {
         <dt class="text-fg-muted">{$t('detail.thumbnails')}</dt>
         <dd class="font-mono text-lg font-bold text-fg">{session.thumbnailCount}</dd>
       </div>
+      <div class="h-px bg-border"></div>
+      <div class="flex flex-col gap-1">
+        <dt class="text-fg-muted">{$t('detail.dateRange')}</dt>
+        <dd class="text-fg-secondary">
+          {#if span}
+            {@const from = formatDate(span.from, $currentLocale)}
+            {@const to = formatDate(span.to, $currentLocale)}
+            {from}
+            {#if to !== from}
+              – {to}
+            {/if}
+            {#if untimed > 0}
+              <span class="text-fg-muted">· {$t('detail.untimed', { count: untimed })}</span>
+            {/if}
+          {:else}
+            <span class="text-fg-muted">{$t('detail.noDateRange')}</span>
+          {/if}
+        </dd>
+      </div>
     </dl>
   </div>
 
   <!-- Download buttons -->
   {#if hasImages}
     <div class="flex gap-2">
-      <button
-        type="button"
-        class="flex-1 rounded-lg border border-border bg-surface-secondary px-3 py-2.5 text-xs font-medium text-fg-secondary transition-colors hover:bg-surface hover:text-fg"
-        onclick={downloadCsv}
-      >
-        <span class="inline-flex items-center gap-1.5">
-          <Download size={14} />
-          {$t('common.csv')}
-        </span>
-      </button>
-      <button
-        type="button"
-        class="flex-1 rounded-lg border border-border bg-surface-secondary px-3 py-2.5 text-xs font-medium text-fg-secondary transition-colors hover:bg-surface hover:text-fg"
+      <ExportButton variant="csv" labelKey="common.csv" onclick={downloadCsv} />
+      <ExportButton
+        variant="zip"
+        labelKey={downloading ? 'detail.downloading' : 'common.zip'}
         disabled={downloading}
+        bounce={downloading}
         onclick={downloadZip}
-      >
-        <span class="inline-flex items-center gap-1.5">
-          <Download size={14} class={downloading ? 'animate-bounce' : ''} />
-          {downloading ? $t('detail.downloading') : $t('common.zip')}
-        </span>
-      </button>
+      />
     </div>
   {:else}
     <p class="text-center text-xs text-fg-muted">

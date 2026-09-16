@@ -135,6 +135,9 @@ export const id: Record<MessageKey, Message> = {
   'detail.date': 'Tanggal',
   'detail.source': 'Sumber',
   'detail.thumbnails': 'Thumbnail',
+  'detail.dateRange': 'Rentang tanggal',
+  'detail.noDateRange': 'Tanggal publikasi tidak tersedia',
+  'detail.untimed': '{count} tanpa tanggal',
   'detail.downloading': 'Mengunduh…',
   'detail.noImages': 'Gambar tidak disimpan pada sesi ini. Ambil ulang untuk mengunduhnya.',
 

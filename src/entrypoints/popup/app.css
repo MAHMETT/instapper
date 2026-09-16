@@ -14,6 +14,9 @@
   --text-primary: #111318;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
+  /* Export button accents; darkened in light mode so the label stays legible. */
+  --csv: #15803d;
+  --zip: #b45309;
 }
 
 /* ── Theme tokens: dark (brand default) ───────────────── */
@@ -25,6 +28,8 @@
   --text-primary: #f8fafc;
   --text-secondary: #a7b0c0;
   --text-muted: #6f7888;
+  --csv: #4ade80;
+  --zip: #fbbf24;
 }
 
 @theme {
@@ -62,6 +67,8 @@
   --color-fg: var(--text-primary);
   --color-fg-secondary: var(--text-secondary);
   --color-fg-muted: var(--text-muted);
+  --color-csv: var(--csv);
+  --color-zip: var(--zip);
 }
 
 @layer base {

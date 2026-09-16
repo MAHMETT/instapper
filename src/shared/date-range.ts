@@ -101,3 +101,22 @@ export function boundsForRange(range: DateRangeSettings, now: number = Date.now(
 export function lowerBoundFor(range: DateRangeSettings, now: number = Date.now()): number | null {
   return boundsForRange(range, now).from;
 }
+
+/**
+ * The span the given thumbnails actually cover, from the oldest to the newest
+ * publish time. Null when none of them have a known date.
+ */
+export function dateSpanOf(images: ScrapedImage[]): { from: number; to: number } | null {
+  let from = Number.POSITIVE_INFINITY;
+  let to = Number.NEGATIVE_INFINITY;
+  let dated = 0;
+
+  for (const image of images) {
+    if (image.takenAt === null) continue;
+    dated++;
+    if (image.takenAt < from) from = image.takenAt;
+    if (image.takenAt > to) to = image.takenAt;
+  }
+
+  return dated === 0 ? null : { from, to };
+}
