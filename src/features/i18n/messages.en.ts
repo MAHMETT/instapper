@@ -42,6 +42,7 @@ export const en = {
   'action.startHint': 'Start scraping',
   'action.reset': 'Reset',
   'action.csvHint': 'Download CSV — some expired links may fail',
+  'action.exportBlocked': 'Exports unlock once scraping stops.',
 
   // Export progress
   'progress.starting': 'Starting…',

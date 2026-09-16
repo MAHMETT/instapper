@@ -28,6 +28,10 @@ let {
 } = $props();
 
 const stopped = $derived(!scrolling && hasImages);
+
+/** Exports stay locked while a scrape runs, so the archive is never a
+ *  half-collected snapshot of a list that is still growing. */
+const exportReady = $derived(canExport && !scrolling);
 </script>
 
 <div class="flex flex-col gap-2.5">
@@ -140,14 +144,14 @@ const stopped = $derived(!scrolling && hasImages);
               {...props}
               type="button"
               class="flex-1 rounded-lg border border-border bg-surface-secondary px-3 py-2.5 text-xs font-medium text-fg transition-all hover:bg-border/50 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-              disabled={!canExport}
+              disabled={!exportReady}
               onclick={onDownload}
             >
               <span class="inline-flex items-center gap-1.5">
                 <span
-                  class="inline-block transition-transform {canExport
+                  class="inline-block transition-transform {exportReady
                     ? 'animate-[bounce_0.6s_ease-in-out]'
-                    : ''} {canExport ? '' : 'opacity-40'}"
+                    : ''} {exportReady ? '' : 'opacity-40'}"
                 >
                   <Download size={14} />
                 </span>
@@ -170,14 +174,14 @@ const stopped = $derived(!scrolling && hasImages);
     <button
       type="button"
       class="flex-1 rounded-lg border border-border bg-surface-secondary px-3 py-2.5 text-xs font-medium text-fg transition-all hover:bg-border/50 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-      disabled={!canExport || exporting}
+      disabled={!exportReady || exporting}
       onclick={onExport}
     >
       <span class="inline-flex items-center gap-1.5">
         <span
-          class="inline-block transition-transform {canExport && !exporting
+          class="inline-block transition-transform {exportReady && !exporting
             ? 'animate-[bounce_0.6s_ease-in-out]'
-            : ''} {canExport && !exporting ? '' : 'opacity-40'}"
+            : ''} {exportReady && !exporting ? '' : 'opacity-40'}"
         >
           <Download size={14} />
         </span>
@@ -185,6 +189,10 @@ const stopped = $derived(!scrolling && hasImages);
       </span>
     </button>
   </div>
+
+  {#if scrolling && hasImages}
+    <p class="text-center text-xs text-fg-muted">{$t('action.exportBlocked')}</p>
+  {/if}
 
   <Separator.Root class="my-1 h-px w-full bg-border" />
 </div>

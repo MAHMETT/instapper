@@ -45,6 +45,7 @@ export const id: Record<MessageKey, Message> = {
   'action.startHint': 'Mulai pengambilan',
   'action.reset': 'Reset',
   'action.csvHint': 'Unduh CSV — sebagian tautan kedaluwarsa bisa gagal',
+  'action.exportBlocked': 'Ekspor bisa dipakai setelah pengambilan berhenti.',
 
   // Export progress
   'progress.starting': 'Memulai…',

@@ -327,6 +327,8 @@ async function handleStop() {
 }
 
 async function handleDownload() {
+  if (scrolling) return;
+
   const selected = visibleImages;
   if (selected.length === 0) return;
   const csv = buildCsv(selected.map((image) => image.url));
@@ -369,7 +371,8 @@ async function confirmClear() {
 }
 
 function handleExport() {
-  if (exporting || !canExport) return;
+  // Exports stay locked while scraping, so the archive is complete.
+  if (exporting || scrolling || !canExport) return;
   exportPhase = 'choose';
   exportOutcome = null;
   exportError = '';
