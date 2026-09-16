@@ -1,14 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
 
 // Capture the options each storage item is defined with, so the real migration
-// functions run exactly as wxt would invoke them.
-const { defineItemMock } = vi.hoisted(() => ({
-  defineItemMock: vi.fn((_key: string, options: Record<string, unknown>) => options),
-}));
+// functions run exactly as wxt would invoke them. Each item also gets a working
+// in-memory getValue/setValue so merge behaviour can be exercised.
+const { defineItemMock, store } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  const defineItemMock = vi.fn((key: string, options: Record<string, unknown>) => ({
+    ...options,
+    getValue: async () => (store.has(key) ? store.get(key) : options.fallback),
+    setValue: async (value: unknown) => {
+      store.set(key, value);
+    },
+  }));
+  return { defineItemMock, store };
+});
 
 vi.mock('wxt/utils/storage', () => ({ storage: { defineItem: defineItemMock } }));
 
-import { scrapedImages, scrapingHistory } from '@/shared/storage';
+import { DEFAULT_DATE_RANGE_SETTINGS } from '@/shared/date-range';
+import { scrapedImages, scrapingHistory, settings, updateSettings } from '@/shared/storage';
 
 interface ItemOptions {
   version?: number;
@@ -97,5 +107,80 @@ describe('scrapingHistory storage migration', () => {
 
   it('survives a non-array value', () => {
     expect(migrateToV2(scrapingHistory, null)).toEqual([]);
+  });
+});
+
+describe('settings storage migration', () => {
+  it('is declared as v2 with a migration', () => {
+    const options = settings as unknown as ItemOptions;
+    expect(options.version).toBe(2);
+    expect(typeof options.migrations?.[2]).toBe('function');
+  });
+
+  it('adds the default date range when upgrading from v1', () => {
+    expect(migrateToV2(settings, { zipImageFormat: 'png' })).toEqual({
+      zipImageFormat: 'png',
+      dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+    });
+  });
+
+  it('keeps a stored date range, so it can run twice', () => {
+    const value = {
+      zipImageFormat: 'png',
+      dateRange: { preset: '1m', from: null, to: null },
+    };
+    expect(migrateToV2(settings, value)).toEqual(value);
+  });
+
+  it('falls back to defaults when nothing is stored', () => {
+    expect(migrateToV2(settings, undefined)).toEqual({
+      zipImageFormat: 'jpeg',
+      dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+    });
+  });
+});
+
+describe('updateSettings', () => {
+  // Regression: writing the whole object from one page used to wipe the other
+  // page's preference.
+  it('merges a patch instead of replacing everything', async () => {
+    await settings.setValue({
+      zipImageFormat: 'jpeg',
+      dateRange: { preset: '1m', from: null, to: null },
+    });
+
+    await updateSettings({ zipImageFormat: 'png' });
+
+    expect(await settings.getValue()).toEqual({
+      zipImageFormat: 'png',
+      dateRange: { preset: '1m', from: null, to: null },
+    });
+  });
+
+  it('stores the date range without disturbing the zip format', async () => {
+    await settings.setValue({
+      zipImageFormat: 'png',
+      dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+    });
+
+    await updateSettings({
+      dateRange: { preset: 'custom', from: '2026-01-10', to: '2026-01-20' },
+    });
+
+    expect(await settings.getValue()).toEqual({
+      zipImageFormat: 'png',
+      dateRange: { preset: 'custom', from: '2026-01-10', to: '2026-01-20' },
+    });
+  });
+
+  it('starts from the defaults when nothing is stored yet', async () => {
+    store.delete('local:settings');
+
+    await updateSettings({ zipImageFormat: 'png' });
+
+    expect(await settings.getValue()).toEqual({
+      zipImageFormat: 'png',
+      dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+    });
   });
 });

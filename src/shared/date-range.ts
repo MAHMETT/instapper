@@ -1,10 +1,17 @@
-import type { ScrapedImage } from './types';
+import type { DateRangeSettings, ScrapedImage } from './types';
 
 /** Windows the UI can filter by; `custom` uses explicit bounds instead. */
 export type DateRangePreset = 'all' | '1m' | '3m' | '6m' | '8m' | '12m' | 'custom';
 
 /** Product default: the last eight months. */
 export const DEFAULT_DATE_RANGE: DateRangePreset = '8m';
+
+/** Default filter state, shared by the storage fallback and the UI. */
+export const DEFAULT_DATE_RANGE_SETTINGS: DateRangeSettings = {
+  preset: DEFAULT_DATE_RANGE,
+  from: null,
+  to: null,
+};
 
 export const DATE_RANGE_OPTIONS: ReadonlyArray<{ value: DateRangePreset; label: string }> = [
   { value: 'all', label: 'All dates' },
@@ -74,4 +81,22 @@ export function filterByDateRange(images: ScrapedImage[], bounds: DateBounds): S
     if (bounds.to !== null && image.takenAt > bounds.to) return false;
     return true;
   });
+}
+
+/** Resolve the persisted filter into concrete bounds. */
+export function boundsForRange(range: DateRangeSettings, now: number = Date.now()): DateBounds {
+  if (range.preset !== 'custom') return boundsForPreset(range.preset, now);
+
+  return {
+    from: dayBound(range.from ?? '', 'start'),
+    to: dayBound(range.to ?? '', 'end'),
+  };
+}
+
+/**
+ * The oldest a scrape may descend to before it is walking further back in time
+ * than the user asked for. Null when the range has no floor.
+ */
+export function lowerBoundFor(range: DateRangeSettings, now: number = Date.now()): number | null {
+  return boundsForRange(range, now).from;
 }

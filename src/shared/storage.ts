@@ -1,9 +1,11 @@
 import { storage } from 'wxt/utils/storage';
+import { DEFAULT_DATE_RANGE_SETTINGS } from './date-range';
 import type {
   CurrentSession,
   ExportJobState,
   ScrapedImage,
   ScrapedImages,
+  ScrapeState,
   ScrapingSession,
   Settings,
   UIState,
@@ -64,8 +66,29 @@ export const currentSession = storage.defineItem<CurrentSession | null>('local:c
   fallback: null,
 });
 
-/** User preferences. JPEG by default: Instagram thumbnails already ship as JPEG,
- * so the default export stays byte-for-byte identical to the raw download. */
+/** JPEG by default: Instagram thumbnails already ship as JPEG, so the default
+ * export stays byte-for-byte identical to the raw download. */
+const DEFAULT_SETTINGS: Settings = {
+  zipImageFormat: 'jpeg',
+  dateRange: DEFAULT_DATE_RANGE_SETTINGS,
+};
+
+/** User preferences. v1 only stored `zipImageFormat`. */
 export const settings = storage.defineItem<Settings>('local:settings', {
-  fallback: { zipImageFormat: 'jpeg' },
+  fallback: DEFAULT_SETTINGS,
+  version: 2,
+  migrations: {
+    2: (oldValue: unknown) => ({ ...DEFAULT_SETTINGS, ...(oldValue as Partial<Settings>) }),
+  },
+});
+
+/** Merge a partial update, so one preference never clobbers the others. */
+export async function updateSettings(patch: Partial<Settings>): Promise<void> {
+  const current = await settings.getValue();
+  await settings.setValue({ ...current, ...patch });
+}
+
+/** Set by the content script when scrolling stops at the date range floor. */
+export const scrapeState = storage.defineItem<ScrapeState>('local:scrapeState', {
+  fallback: { stoppedByRange: false },
 });

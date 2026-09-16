@@ -101,10 +101,21 @@ export function getUniqueImages(
   return { updatedList: [...byUrl.values()], addedCount, datedCount };
 }
 
-/** Scrape the page, persist any new images, and return how many were added. */
-export async function scrapeAndStore(): Promise<number> {
+export interface ScrapeResult {
+  addedCount: number;
+  /** Publish times of this pass's thumbnails that have a known date. */
+  seenDates: number[];
+}
+
+/** Scrape the page, persist any new images, and report what the pass saw. */
+export async function scrapeAndStore(): Promise<ScrapeResult> {
   const found = findImages();
-  if (found.length === 0) return 0;
+  if (found.length === 0) return { addedCount: 0, seenDates: [] };
+
+  const seenDates: number[] = [];
+  for (const image of found) {
+    if (image.takenAt !== null) seenDates.push(image.takenAt);
+  }
 
   const existing = await scrapedImages.getValue();
   const { updatedList, addedCount, datedCount } = getUniqueImages(existing, found);
@@ -113,5 +124,5 @@ export async function scrapeAndStore(): Promise<number> {
     await scrapedImages.setValue(updatedList);
   }
 
-  return addedCount;
+  return { addedCount, seenDates };
 }

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   boundsForPreset,
+  boundsForRange,
   dayBound,
   filterByDateRange,
+  lowerBoundFor,
   toDateInputValue,
 } from '@/shared/date-range';
 import type { ScrapedImage } from '@/shared/types';
@@ -99,5 +101,54 @@ describe('filterByDateRange', () => {
   it('supports an upper bound only', () => {
     const kept = filterByDateRange(images, { from: null, to: Date.UTC(2025, 0, 1) });
     expect(kept.map((i) => i.url)).toEqual(['old', 'undated']);
+  });
+});
+
+describe('boundsForRange', () => {
+  it('resolves a preset window', () => {
+    expect(boundsForRange({ preset: 'all', from: null, to: null }, NOW)).toEqual({
+      from: null,
+      to: null,
+    });
+    expect(boundsForRange({ preset: '8m', from: null, to: null }, NOW)).toEqual({
+      from: new Date(2025, 9, 15, 12, 0, 0).getTime(),
+      to: null,
+    });
+  });
+
+  it('resolves a custom window, including the whole end day', () => {
+    expect(boundsForRange({ preset: 'custom', from: '2026-01-10', to: '2026-01-20' }, NOW)).toEqual(
+      {
+        from: new Date(2026, 0, 10, 0, 0, 0, 0).getTime(),
+        to: new Date(2026, 0, 20, 23, 59, 59, 999).getTime(),
+      },
+    );
+  });
+
+  it('leaves a blank custom window unbounded', () => {
+    expect(boundsForRange({ preset: 'custom', from: null, to: null }, NOW)).toEqual({
+      from: null,
+      to: null,
+    });
+  });
+});
+
+describe('lowerBoundFor', () => {
+  it('returns the floor for a preset', () => {
+    expect(lowerBoundFor({ preset: '1m', from: null, to: null }, NOW)).toBe(
+      new Date(2026, 4, 15, 12, 0, 0).getTime(),
+    );
+  });
+
+  it('returns the custom start when set', () => {
+    expect(lowerBoundFor({ preset: 'custom', from: '2026-01-10', to: null }, NOW)).toBe(
+      new Date(2026, 0, 10, 0, 0, 0, 0).getTime(),
+    );
+  });
+
+  // A null floor is what keeps the scroller from ever auto-stopping.
+  it('returns null when the range has no floor', () => {
+    expect(lowerBoundFor({ preset: 'all', from: null, to: null }, NOW)).toBeNull();
+    expect(lowerBoundFor({ preset: 'custom', from: null, to: '2026-01-20' }, NOW)).toBeNull();
   });
 });

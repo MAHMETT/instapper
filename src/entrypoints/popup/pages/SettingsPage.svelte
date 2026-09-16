@@ -1,5 +1,5 @@
 <script lang="ts">
-import { settings } from '@/shared/storage';
+import { settings, updateSettings } from '@/shared/storage';
 import type { ZipImageFormat } from '@/shared/types';
 
 const options: { value: ZipImageFormat; label: string; hint: string }[] = [
@@ -16,7 +16,8 @@ $effect(() => {
 
 function select(value: ZipImageFormat) {
   format = value;
-  settings.setValue({ zipImageFormat: value });
+  // Merge, so the date range preference is not wiped.
+  void updateSettings({ zipImageFormat: value });
 }
 </script>
 

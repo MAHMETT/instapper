@@ -1,3 +1,5 @@
+import type { DateRangePreset } from './date-range';
+
 /** A scraped thumbnail and the publish time of the post it came from. */
 export interface ScrapedImage {
   url: string;
@@ -55,9 +57,24 @@ export interface ScrapingSession {
 /** Image format every thumbnail is converted to inside an exported ZIP. */
 export type ZipImageFormat = 'png' | 'jpeg';
 
+/** The active date range filter, persisted so it survives a popup restart. */
+export interface DateRangeSettings {
+  preset: DateRangePreset;
+  /** Custom window bounds as `YYYY-MM-DD`; only used when preset is 'custom'. */
+  from: string | null;
+  to: string | null;
+}
+
 /** User-configurable preferences. */
 export interface Settings {
   zipImageFormat: ZipImageFormat;
+  dateRange: DateRangeSettings;
+}
+
+/** Why the scroller last stopped itself, surfaced to the popup. */
+export interface ScrapeState {
+  /** True when scrolling stopped because it passed the date range floor. */
+  stoppedByRange: boolean;
 }
 
 /** Persisted UI navigation state. */

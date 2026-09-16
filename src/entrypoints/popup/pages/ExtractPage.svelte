@@ -6,10 +6,10 @@ import { exportImagesZip } from '@/features/export/export';
 import type { Theme } from '@/features/theme/theme';
 import {
   boundsForPreset,
+  boundsForRange,
   DATE_RANGE_OPTIONS,
   type DateRangePreset,
-  DEFAULT_DATE_RANGE,
-  dayBound,
+  DEFAULT_DATE_RANGE_SETTINGS,
   filterByDateRange,
   toDateInputValue,
 } from '@/shared/date-range';
@@ -18,10 +18,13 @@ import {
   currentSession,
   exportJob,
   scrapedImages,
+  scrapeState,
   scrapingHistory,
   settings,
+  updateSettings,
 } from '@/shared/storage';
 import type {
+  DateRangeSettings,
   ExportProgress as ExportProgressType,
   ScrapedImage,
   ScrapingSession,
@@ -60,10 +63,8 @@ let prevCount = $state(0);
 let pop = $state(false);
 let popTimer: ReturnType<typeof setTimeout> | undefined;
 
-// Date range filter
-let datePreset = $state<DateRangePreset>(DEFAULT_DATE_RANGE);
-let customFrom = $state(toDateInputValue(boundsForPreset(DEFAULT_DATE_RANGE).from ?? Date.now()));
-let customTo = $state(toDateInputValue(Date.now()));
+// Date range filter — persisted in settings, so it survives the popup closing
+let dateRange = $state<DateRangeSettings>({ ...DEFAULT_DATE_RANGE_SETTINGS });
 
 // Export state
 let exporting = $state(false);
@@ -72,18 +73,43 @@ let abortController = $state<AbortController | null>(null);
 
 // ── Derived ──────────────────────────────────────────────
 const count = $derived(images.length);
-const bounds = $derived(
-  datePreset === 'custom'
-    ? { from: dayBound(customFrom, 'start'), to: dayBound(customTo, 'end') }
-    : boundsForPreset(datePreset),
-);
+const bounds = $derived(boundsForRange(dateRange));
 const visibleImages = $derived(filterByDateRange(images, bounds));
-const canExport = $derived(visibleImages.length > 0);
+const visibleCount = $derived(visibleImages.length);
+const canExport = $derived(visibleCount > 0);
 const exportPercent = $derived(
   exportProgress && exportProgress.total > 0
     ? Math.round((exportProgress.done / exportProgress.total) * 100)
     : 0,
 );
+
+// ── Filter ───────────────────────────────────────────────
+async function setPreset(preset: DateRangePreset) {
+  let next: DateRangeSettings = { ...dateRange, preset };
+
+  // Seed the custom window on first use so the inputs are never blank.
+  if (preset === 'custom' && (!next.from || !next.to)) {
+    const fallback = boundsForPreset('8m');
+    next = {
+      ...next,
+      from: next.from ?? toDateInputValue(fallback.from ?? Date.now()),
+      to: next.to ?? toDateInputValue(Date.now()),
+    };
+  }
+
+  dateRange = next;
+  await updateSettings({ dateRange: next });
+}
+
+async function setCustomFrom(value: string) {
+  dateRange = { ...dateRange, from: value };
+  await updateSettings({ dateRange });
+}
+
+async function setCustomTo(value: string) {
+  dateRange = { ...dateRange, to: value };
+  await updateSettings({ dateRange });
+}
 
 // ── Tab resolution ───────────────────────────────────────
 async function resolveTab(): Promise<void> {
@@ -151,14 +177,14 @@ async function switchToTab() {
 
 // Animate stat pop on count change
 $effect(() => {
-  if (count !== prevCount && prevCount > 0) {
+  if (visibleCount !== prevCount && prevCount > 0) {
     pop = true;
     clearTimeout(popTimer);
     popTimer = setTimeout(() => {
       pop = false;
     }, 300);
   }
-  prevCount = count;
+  prevCount = visibleCount;
 });
 
 // Escape key closes modal / cancels export
@@ -176,8 +202,12 @@ $effect(() => {
   return () => window.removeEventListener('keydown', onKeydown);
 });
 
-// Initialize: target tab, count, scrolling state
+// Initialize: target tab, collection, persisted filter, scrolling state
 $effect(() => {
+  settings.getValue().then((state) => {
+    dateRange = state.dateRange;
+  });
+
   resolveTab().then(() => {
     scrapedImages.getValue().then((found) => {
       images = found;
@@ -194,6 +224,20 @@ $effect(() => {
 
   const unwatch = scrapedImages.watch((found) => {
     images = found;
+  });
+
+  // Keep the filter in sync between the popup and the detached window.
+  const unwatchSettings = settings.watch((state) => {
+    dateRange = state.dateRange;
+  });
+
+  // The scroller stops itself once it walks past the range floor.
+  const unwatchScrape = scrapeState.watch((state) => {
+    if (!state.stoppedByRange) return;
+    scrolling = false;
+    message = 'Stopped: reached posts older than the selected date range.';
+    messageType = 'info';
+    void scrapeState.setValue({ stoppedByRange: false });
   });
 
   const unwatchJob = exportJob.watch((state) => {
@@ -231,6 +275,8 @@ $effect(() => {
   return () => {
     unwatch();
     unwatchJob();
+    unwatchSettings();
+    unwatchScrape();
   };
 });
 
@@ -397,15 +443,15 @@ async function runZipExport(grouping: ZipGrouping) {
       <p class="mt-1 text-sm text-fg-secondary">Grab thumbnails. Instantly.</p>
     </div>
 
-    <StatsCard {count} {pop} />
+    <StatsCard count={visibleCount} total={count} {pop} />
 
     <div class="mt-4 flex flex-col gap-2">
       <div class="flex items-center justify-between gap-2">
         <label for="date-range" class="text-xs font-medium text-fg-secondary">Date range</label>
         <select
           id="date-range"
-          value={datePreset}
-          onchange={(e) => (datePreset = e.currentTarget.value as DateRangePreset)}
+          value={dateRange.preset}
+          onchange={(e) => setPreset(e.currentTarget.value as DateRangePreset)}
           class="rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs font-medium text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
         >
           {#each DATE_RANGE_OPTIONS as option}
@@ -414,26 +460,24 @@ async function runZipExport(grouping: ZipGrouping) {
         </select>
       </div>
 
-      {#if datePreset === 'custom'}
+      {#if dateRange.preset === 'custom'}
         <div class="flex items-center gap-2">
           <input
             type="date"
             aria-label="From date"
-            bind:value={customFrom}
+            value={dateRange.from ?? ''}
+            oninput={(e) => setCustomFrom(e.currentTarget.value)}
             class="w-full rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
           >
           <span class="shrink-0 text-xs text-fg-muted">to</span>
           <input
             type="date"
             aria-label="To date"
-            bind:value={customTo}
+            value={dateRange.to ?? ''}
+            oninput={(e) => setCustomTo(e.currentTarget.value)}
             class="w-full rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs text-fg dark:[color-scheme:dark] focus-visible:outline-2 focus-visible:outline-brand-cyan focus-visible:outline-offset-2"
           >
         </div>
-      {/if}
-
-      {#if visibleImages.length !== count}
-        <p class="text-xs text-fg-muted">Showing {visibleImages.length} of {count} thumbnails</p>
       {/if}
     </div>
 
@@ -467,9 +511,5 @@ async function runZipExport(grouping: ZipGrouping) {
   </main>
 
   <ConfirmClearDialog bind:open={showClearModal} onConfirm={confirmClear} />
-  <ExportZipDialog
-    bind:open={showExportModal}
-    count={visibleImages.length}
-    onConfirm={runZipExport}
-  />
+  <ExportZipDialog bind:open={showExportModal} count={visibleCount} onConfirm={runZipExport} />
 </div>
